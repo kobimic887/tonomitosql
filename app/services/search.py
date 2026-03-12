@@ -5,13 +5,14 @@ Uses raw SQL with parameterized queries for all RDKit operations:
 - Tanimoto similarity: % operator + tanimoto_sml() with SET rdkit.tanimoto_threshold
 - Substructure: @> operator (substructure containment)
 
-SMILES validation and canonicalization is performed by PostgreSQL's RDKit cartridge
-(mol_from_smiles) rather than Python-side rdkit-pypi, for ARM (aarch64) compatibility.
+SMILES validation uses rdkit-pypi when available (x86_64), falls back to
+PostgreSQL's RDKit cartridge (mol_from_smiles) on ARM.
 All queries use parameterized %s placeholders — never string concatenation.
 """
 
 import logging
 
+from app.chem import validate_query_smiles
 from app.db.session import get_db
 from app.models.schemas import MoleculeResult, SearchResponse
 
@@ -26,31 +27,15 @@ DEFAULT_TANIMOTO_THRESHOLD = 0.5
 
 
 def _validate_query_smiles(smiles: str) -> str:
-    """Validate and canonicalize a query SMILES string using the RDKit cartridge.
+    """Validate and canonicalize a query SMILES string.
 
-    Delegates to PostgreSQL's mol_from_smiles() for validation and
-    mol_to_smiles() for canonicalization. This avoids rdkit-pypi which
-    has no ARM (aarch64) wheels.
+    Uses rdkit-pypi if available (x86_64), otherwise falls back to
+    PostgreSQL's RDKit cartridge (mol_from_smiles + mol_to_smiles).
 
     Returns the canonical SMILES on success.
     Raises ValueError with descriptive message on failure.
     """
-    smiles = smiles.strip()
-    if not smiles:
-        raise ValueError("Empty SMILES string")
-
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT mol_to_smiles(mol_from_smiles(%s::cstring))",
-                (smiles,),
-            )
-            row = cur.fetchone()
-
-    if row is None or row[0] is None:
-        raise ValueError(f"Invalid SMILES: '{smiles}' could not be parsed by RDKit")
-
-    return row[0]
+    return validate_query_smiles(smiles)
 
 
 def _clamp_pagination(offset: int, limit: int) -> tuple[int, int]:

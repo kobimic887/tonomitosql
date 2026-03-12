@@ -5,3 +5,4 @@ pydantic-settings==2.13.1
 psycopg[binary]==3.3.3
 psycopg-pool
 python-multipart
+rdkit-pypi
