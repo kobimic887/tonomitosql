@@ -1,0 +1,13 @@
+.git
+.planning
+__pycache__
+*.pyc
+.env
+.venv
+venv
+tests/
+.pytest_cache
+.coverage
+htmlcov
+*.egg-info
+.DS_Store
