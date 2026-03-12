@@ -2,6 +2,12 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# rdkit-pypi needs libXrender and libXext for 2D depiction (we don't use it,
+# but the import fails without these libs on slim images)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxrender1 libxext6 && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
