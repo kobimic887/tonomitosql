@@ -63,7 +63,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — API key authentication (api_keys table, auth dependency, key management script, protect /upload)
+- [x] 03-01-PLAN.md — API key authentication (api_keys table, auth dependency, key management script, protect /upload)
 - [ ] 03-02-PLAN.md — Search service + endpoints (exact match, Tanimoto similarity, substructure search, pagination)
 - [ ] 03-03-PLAN.md — Wire search endpoints with auth + error response differentiation
 
@@ -76,4 +76,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Infrastructure & API Foundation | 2/2 | Complete | 2026-03-12 |
 | 2. CSV Ingestion Pipeline | 2/2 | Complete | 2026-03-12 |
-| 3. Search & Authentication | 0/3 | Not started | - |
+| 3. Search & Authentication | 1/3 | In Progress | - |

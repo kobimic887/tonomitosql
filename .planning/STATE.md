@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-12T19:49:42.077Z"
+status: in-progress
+last_updated: "2026-03-12T19:57:24Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 7
+  completed_plans: 5
 ---
 
 # Project State
@@ -22,19 +22,19 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 
 ## Current Position
 
-Phase: 3 of 3 (Search & Authentication) — PLANNED
-Plan: 0 of 3 in current phase
-Status: Phase 3 planned (3 plans in 2 waves), ready for execution
-Last activity: 2026-03-12 — Created Phase 3 plans (03-01, 03-02, 03-03)
+Phase: 3 of 3 (Search & Authentication) — IN PROGRESS
+Plan: 1 of 3 in current phase
+Status: Plan 03-01 complete (API key auth), executing Plan 03-02 next
+Last activity: 2026-03-12 — Completed 03-01 (API key authentication)
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 2.0 min
-- Total execution time: 0.13 hours
+- Total plans completed: 5
+- Average duration: 1.8 min
+- Total execution time: 0.15 hours
 
 **By Phase:**
 
@@ -42,9 +42,10 @@ Progress: [██████░░░░] 57%
 |-------|-------|-------|----------|
 | 01-infrastructure | 2 | 5 min | 2.5 min |
 | 02-csv-ingestion | 2 | 3 min | 1.5 min |
+| 03-search-authentication | 1 | 1 min | 1.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (2 min), 02-01 (2 min), 02-02 (1 min)
+- Last 5 plans: 01-02 (2 min), 02-01 (2 min), 02-02 (1 min), 03-01 (1 min)
 - Trend: Stable/Improving
 
 *Updated after each plan completion*
@@ -74,6 +75,10 @@ Recent decisions affecting current work:
 - [02-02]: SpooledTemporaryFile streaming — no separate temp file, FastAPI spools >1MB to disk
 - [02-02]: 201 Created response — semantically correct for resource creation endpoint
 - [02-02]: Synchronous upload for v1 — async deferred to ADVN-03
+- [03-01]: SHA-256 hash stored in DB, raw key never persisted — standard API key security pattern
+- [03-01]: APIKeyHeader with auto_error=False for custom 401 messages instead of FastAPI default 403
+- [03-01]: 401 Unauthorized (not 403 Forbidden) — semantically correct for missing/invalid credentials
+- [03-01]: create-api-key.py uses psycopg.connect() directly, not pool — CLI script runs once
 
 ### Pending Todos
 
@@ -88,5 +93,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Phase 3 planned — 3 plans created, ready for execution
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

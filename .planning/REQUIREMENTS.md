@@ -35,7 +35,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### API
 
-- [ ] **API-01**: API key authentication required on all data and search endpoints
+- [x] **API-01**: API key authentication required on all data and search endpoints
 - [x] **API-02**: Health/status endpoint returns API version, database status, and molecule count
 - [ ] **API-03**: Error responses include descriptive messages distinguishing invalid SMILES, no results, bad parameters, and auth failures
 - [x] **API-04**: API auto-generates OpenAPI/Swagger documentation via FastAPI
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRCH-04 | Phase 3 | Pending |
 | SRCH-05 | Phase 3 | Pending |
 | SRCH-06 | Phase 3 | Pending |
-| API-01 | Phase 3 | Pending |
+| API-01 | Phase 3 | ✅ Complete |
 | API-02 | Phase 1 | ✅ Complete |
 | API-03 | Phase 3 | Pending |
 | API-04 | Phase 1 | ✅ Complete |
