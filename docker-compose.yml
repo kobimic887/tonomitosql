@@ -15,9 +15,10 @@ services:
     # See: .planning/research/PITFALLS.md — Security Mistakes
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 30
+      start_period: 120s
 
   api:
     build: .
