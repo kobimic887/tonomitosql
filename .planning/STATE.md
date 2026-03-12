@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 
 ## Current Position
 
-Phase: 3 of 3 (Search & Authentication) — NOT STARTED
+Phase: 3 of 3 (Search & Authentication) — PLANNED
 Plan: 0 of 3 in current phase
-Status: Phase 2 complete, ready for Phase 3 planning
-Last activity: 2026-03-12 — Completed 02-02 (upload endpoint)
+Status: Phase 3 planned (3 plans in 2 waves), ready for execution
+Last activity: 2026-03-12 — Created Phase 3 plans (03-01, 03-02, 03-03)
 
 Progress: [██████░░░░] 57%
 
@@ -82,11 +82,11 @@ None yet.
 ### Blockers/Concerns
 
 - ~~[Research]: RDKit cartridge Docker image tag needs verification during Phase 1 (Release_2025_03_3 vs actual latest)~~ → Resolved: using Release_2024_09_3
-- [Research]: Connection pooling + `tanimoto_threshold` session variable isolation — verify during Phase 3 planning
+- [Research]: Connection pooling + `tanimoto_threshold` session variable isolation — addressed in Phase 3: SET per-query before each similarity search, connection pool returns connections with potentially stale threshold
 - [Research]: Large CSV upload may timeout at 100K+ rows — validate during Phase 2 implementation
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Completed 02-02-PLAN.md — Phase 2 complete, upload endpoint wired
+Stopped at: Phase 3 planned — 3 plans created, ready for execution
 Resume file: None

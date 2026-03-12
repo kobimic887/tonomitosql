@@ -60,12 +60,12 @@ Plans:
   3. User can search by substructure using a SMILES pattern and get all matching molecules
   4. All search results include canonical SMILES and similarity scores, and support pagination (offset/limit)
   5. All data and search endpoints require a valid API key; requests without a key or with an invalid key get a clear 401/403 error distinguishing auth failures from invalid SMILES, no results, and bad parameters
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — API key authentication (api_keys table, auth dependency, key management script, protect /upload)
+- [ ] 03-02-PLAN.md — Search service + endpoints (exact match, Tanimoto similarity, substructure search, pagination)
+- [ ] 03-03-PLAN.md — Wire search endpoints with auth + error response differentiation
 
 ## Progress
 
