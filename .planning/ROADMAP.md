@@ -47,7 +47,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — rdkit-pypi dependency + ingestion service (CSV parsing, SMILES validation, batch COPY, fingerprint computation) + upload response schemas
+- [x] 02-01-PLAN.md — rdkit-pypi dependency + ingestion service (CSV parsing, SMILES validation, batch COPY, fingerprint computation) + upload response schemas
 - [ ] 02-02-PLAN.md — POST /upload endpoint router, wire into FastAPI app, large file upload handling
 
 ### Phase 3: Search & Authentication
@@ -75,5 +75,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure & API Foundation | 2/2 | Complete | 2026-03-12 |
-| 2. CSV Ingestion Pipeline | 0/2 | Not started | - |
+| 2. CSV Ingestion Pipeline | 1/2 | In Progress | - |
 | 3. Search & Authentication | 0/3 | Not started | - |

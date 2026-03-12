@@ -18,11 +18,11 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Data Ingestion
 
 - [ ] **INGT-01**: User can upload a CSV file via API endpoint containing SMILES and optional metadata columns
-- [ ] **INGT-02**: System validates every SMILES string on ingest and reports row-level errors for invalid molecules
-- [ ] **INGT-03**: System canonicalizes SMILES on ingest for consistent storage and matching
-- [ ] **INGT-04**: System pre-computes Morgan fingerprints (radius 2) and stores them with GiST indexes on ingest
-- [ ] **INGT-05**: System stores arbitrary CSV metadata columns as JSONB alongside molecules
-- [ ] **INGT-06**: Ingestion handles 100K+ rows efficiently using PostgreSQL COPY protocol
+- [x] **INGT-02**: System validates every SMILES string on ingest and reports row-level errors for invalid molecules
+- [x] **INGT-03**: System canonicalizes SMILES on ingest for consistent storage and matching
+- [x] **INGT-04**: System pre-computes Morgan fingerprints (radius 2) and stores them with GiST indexes on ingest
+- [x] **INGT-05**: System stores arbitrary CSV metadata columns as JSONB alongside molecules
+- [x] **INGT-06**: Ingestion handles 100K+ rows efficiently using PostgreSQL COPY protocol
 
 ### Search
 
@@ -97,11 +97,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFR-04 | Phase 1 | ✅ Complete |
 | INFR-05 | Phase 1 | ✅ Complete |
 | INGT-01 | Phase 2 | Pending |
-| INGT-02 | Phase 2 | Pending |
-| INGT-03 | Phase 2 | Pending |
-| INGT-04 | Phase 2 | Pending |
-| INGT-05 | Phase 2 | Pending |
-| INGT-06 | Phase 2 | Pending |
+| INGT-02 | Phase 2 | ✅ Complete |
+| INGT-03 | Phase 2 | ✅ Complete |
+| INGT-04 | Phase 2 | ✅ Complete |
+| INGT-05 | Phase 2 | ✅ Complete |
+| INGT-06 | Phase 2 | ✅ Complete |
 | SRCH-01 | Phase 3 | Pending |
 | SRCH-02 | Phase 3 | Pending |
 | SRCH-03 | Phase 3 | Pending |

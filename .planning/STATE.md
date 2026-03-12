@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-12T19:25:32.296Z"
+status: in-progress
+last_updated: "2026-03-12T19:43:41Z"
 progress:
-  total_phases: 1
+  total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 7
+  completed_plans: 3
 ---
 
 # Project State
@@ -22,28 +22,29 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 
 ## Current Position
 
-Phase: 2 of 3 (CSV Ingestion Pipeline) — PLANNED
-Plan: 0 of 2 in current phase
-Status: Plans created, ready for execution
-Last activity: 2026-03-12 — Created Phase 2 plans (02-01, 02-02)
+Phase: 2 of 3 (CSV Ingestion Pipeline) — IN PROGRESS
+Plan: 1 of 2 in current phase
+Status: Plan 02-01 complete, ready for 02-02
+Last activity: 2026-03-12 — Completed 02-01 (ingestion service)
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 2.5 min
-- Total execution time: 0.08 hours
+- Total plans completed: 3
+- Average duration: 2.3 min
+- Total execution time: 0.12 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-infrastructure | 2 | 5 min | 2.5 min |
+| 02-csv-ingestion | 1 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (2 min)
+- Last 5 plans: 01-01 (3 min), 01-02 (2 min), 02-01 (2 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -65,6 +66,10 @@ Recent decisions affecting current work:
 - [01-02]: psycopg ConnectionPool min=2, max=10 for connection reuse
 - [01-02]: No SQLAlchemy — raw psycopg for all RDKit queries per research
 - [01-02]: No rdkit-pypi yet — defer to Phase 2 to keep image small
+- [02-01]: Batch size 5000 rows for COPY protocol — balances memory vs round-trip overhead
+- [02-01]: Double validation: Python-side Chem.MolFromSmiles + SQL-side mol_from_smiles safety net
+- [02-01]: ON COMMIT DROP staging table for automatic cleanup
+- [02-01]: rdkit-pypi unpinned — let pip resolve latest compatible wheel for Python 3.12
 
 ### Pending Todos
 
@@ -79,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Created Phase 2 plans (02-01, 02-02) — ready for execution
+Stopped at: Completed 02-01-PLAN.md — ingestion service created
 Resume file: None
