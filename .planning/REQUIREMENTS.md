@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **INFR-01**: System deploys via Docker Compose with a single `docker compose up` command
 - [x] **INFR-02**: PostgreSQL container runs RDKit cartridge with `mol` and `bfp` column types available
-- [ ] **INFR-03**: API container runs FastAPI with Uvicorn, connects to PostgreSQL/RDKit
+- [x] **INFR-03**: API container runs FastAPI with Uvicorn, connects to PostgreSQL/RDKit
 - [x] **INFR-04**: Database schema supports molecule storage with RDKit mol type and Morgan fingerprint columns with GiST indexes
 - [x] **INFR-05**: PostgreSQL memory settings tuned for GiST index builds at 100K+ molecule scale
 
@@ -36,9 +36,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### API
 
 - [ ] **API-01**: API key authentication required on all data and search endpoints
-- [ ] **API-02**: Health/status endpoint returns API version, database status, and molecule count
+- [x] **API-02**: Health/status endpoint returns API version, database status, and molecule count
 - [ ] **API-03**: Error responses include descriptive messages distinguishing invalid SMILES, no results, bad parameters, and auth failures
-- [ ] **API-04**: API auto-generates OpenAPI/Swagger documentation via FastAPI
+- [x] **API-04**: API auto-generates OpenAPI/Swagger documentation via FastAPI
 
 ## v2 Requirements
 
@@ -93,7 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | INFR-01 | Phase 1 | ✅ Complete |
 | INFR-02 | Phase 1 | ✅ Complete |
-| INFR-03 | Phase 1 | Pending |
+| INFR-03 | Phase 1 | ✅ Complete |
 | INFR-04 | Phase 1 | ✅ Complete |
 | INFR-05 | Phase 1 | ✅ Complete |
 | INGT-01 | Phase 2 | Pending |
@@ -109,9 +109,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRCH-05 | Phase 3 | Pending |
 | SRCH-06 | Phase 3 | Pending |
 | API-01 | Phase 3 | Pending |
-| API-02 | Phase 1 | Pending |
+| API-02 | Phase 1 | ✅ Complete |
 | API-03 | Phase 3 | Pending |
-| API-04 | Phase 1 | Pending |
+| API-04 | Phase 1 | ✅ Complete |
 
 **Coverage:**
 - v1 requirements: 21 total
