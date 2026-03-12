@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-12T19:59:03Z"
+last_updated: "2026-03-12T20:15:00Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Given a SMILES query, return chemically similar molecules ranked by Tanimoto similarity from a user-uploaded molecular database — fast, accurate, and at scale (100K+ molecules).
-**Current focus:** Phase 3: Search & Authentication
+**Current focus:** All 3 phases complete. v1.0 milestone achieved.
 
 ## Current Position
 
-Phase: 3 of 3 (Search & Authentication) — IN PROGRESS
-Plan: 2 of 3 in current phase
-Status: Plan 03-02 complete (search service + endpoints), executing Plan 03-03 next
-Last activity: 2026-03-12 — Completed 03-02 (search service and endpoints)
+Phase: 3 of 3 (Search & Authentication) — COMPLETE
+Plan: 3 of 3 in current phase
+Status: All plans complete. Fully functional authenticated molecular search API.
+Last activity: 2026-03-12 — Completed 03-03 (auth wiring to search endpoints)
 
-Progress: [████████░░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -42,10 +42,10 @@ Progress: [████████░░] 86%
 |-------|-------|-------|----------|
 | 01-infrastructure | 2 | 5 min | 2.5 min |
 | 02-csv-ingestion | 2 | 3 min | 1.5 min |
-| 03-search-authentication | 2 | 4 min | 2.0 min |
+| 03-search-authentication | 3 | 6 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (2 min), 02-02 (1 min), 03-01 (1 min), 03-02 (3 min)
+- Last 5 plans: 02-01 (2 min), 02-02 (1 min), 03-01 (1 min), 03-02 (3 min), 03-03 (2 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -85,9 +85,13 @@ Recent decisions affecting current work:
 - [03-02]: Tanimoto threshold floor at 0.1, MAX_LIMIT=1000 — prevent full table scans and unbounded results
 - [03-02]: Sync handlers consistent with project pattern (psycopg sync, FastAPI thread pool)
 
+- [03-03]: Auth dependency added as last parameter on each search endpoint
+- [03-03]: Error differentiation is architectural — no custom error handlers needed
+- [03-03]: main.py already had search router from 03-02, no modification needed
+
 ### Pending Todos
 
-None yet.
+None — all phases complete.
 
 ### Blockers/Concerns
 
@@ -98,5 +102,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Completed 03-02-PLAN.md
+Stopped at: All phases complete. v1.0 milestone achieved.
 Resume file: None
