@@ -22,3 +22,20 @@ class UploadResponse(BaseModel):
     valid_count: int
     invalid_count: int
     errors: list[RowError]
+
+
+class MoleculeResult(BaseModel):
+    """A single molecule in search results."""
+
+    molecule_id: int
+    canonical_smiles: str
+    similarity: float | None = None  # Only populated for similarity search
+
+
+class SearchResponse(BaseModel):
+    """Response for all search endpoints."""
+
+    found: bool
+    count: int
+    results: list[MoleculeResult]
+    query_smiles: str
