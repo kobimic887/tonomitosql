@@ -26,12 +26,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Search
 
-- [ ] **SRCH-01**: User can search for an exact SMILES match and get a yes/no result with the matched molecule
-- [ ] **SRCH-02**: User can search by Tanimoto similarity with a configurable threshold (default 0.5) and get results ranked by similarity score
-- [ ] **SRCH-03**: User can search by substructure using a SMILES pattern and get all molecules containing that substructure
-- [ ] **SRCH-04**: Search results include canonical SMILES and similarity score
-- [ ] **SRCH-05**: Search results support pagination with offset/limit parameters
-- [ ] **SRCH-06**: Similarity search performs sub-second queries on 100K+ molecules using GiST-indexed fingerprints
+- [x] **SRCH-01**: User can search for an exact SMILES match and get a yes/no result with the matched molecule
+- [x] **SRCH-02**: User can search by Tanimoto similarity with a configurable threshold (default 0.5) and get results ranked by similarity score
+- [x] **SRCH-03**: User can search by substructure using a SMILES pattern and get all molecules containing that substructure
+- [x] **SRCH-04**: Search results include canonical SMILES and similarity score
+- [x] **SRCH-05**: Search results support pagination with offset/limit parameters
+- [x] **SRCH-06**: Similarity search performs sub-second queries on 100K+ molecules using GiST-indexed fingerprints
 
 ### API
 
@@ -102,12 +102,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INGT-04 | Phase 2 | ✅ Complete |
 | INGT-05 | Phase 2 | ✅ Complete |
 | INGT-06 | Phase 2 | ✅ Complete |
-| SRCH-01 | Phase 3 | Pending |
-| SRCH-02 | Phase 3 | Pending |
-| SRCH-03 | Phase 3 | Pending |
-| SRCH-04 | Phase 3 | Pending |
-| SRCH-05 | Phase 3 | Pending |
-| SRCH-06 | Phase 3 | Pending |
+| SRCH-01 | Phase 3 | ✅ Complete |
+| SRCH-02 | Phase 3 | ✅ Complete |
+| SRCH-03 | Phase 3 | ✅ Complete |
+| SRCH-04 | Phase 3 | ✅ Complete |
+| SRCH-05 | Phase 3 | ✅ Complete |
+| SRCH-06 | Phase 3 | ✅ Complete |
 | API-01 | Phase 3 | ✅ Complete |
 | API-02 | Phase 1 | ✅ Complete |
 | API-03 | Phase 3 | Pending |

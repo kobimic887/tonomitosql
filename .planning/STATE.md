@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-12T19:57:24Z"
+last_updated: "2026-03-12T19:59:03Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -23,18 +23,18 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 ## Current Position
 
 Phase: 3 of 3 (Search & Authentication) — IN PROGRESS
-Plan: 1 of 3 in current phase
-Status: Plan 03-01 complete (API key auth), executing Plan 03-02 next
-Last activity: 2026-03-12 — Completed 03-01 (API key authentication)
+Plan: 2 of 3 in current phase
+Status: Plan 03-02 complete (search service + endpoints), executing Plan 03-03 next
+Last activity: 2026-03-12 — Completed 03-02 (search service and endpoints)
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 1.8 min
-- Total execution time: 0.15 hours
+- Total execution time: 0.18 hours
 
 **By Phase:**
 
@@ -42,11 +42,11 @@ Progress: [███████░░░] 71%
 |-------|-------|-------|----------|
 | 01-infrastructure | 2 | 5 min | 2.5 min |
 | 02-csv-ingestion | 2 | 3 min | 1.5 min |
-| 03-search-authentication | 1 | 1 min | 1.0 min |
+| 03-search-authentication | 2 | 4 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (2 min), 02-01 (2 min), 02-02 (1 min), 03-01 (1 min)
-- Trend: Stable/Improving
+- Last 5 plans: 02-01 (2 min), 02-02 (1 min), 03-01 (1 min), 03-02 (3 min)
+- Trend: Stable
 
 *Updated after each plan completion*
 
@@ -79,6 +79,11 @@ Recent decisions affecting current work:
 - [03-01]: APIKeyHeader with auto_error=False for custom 401 messages instead of FastAPI default 403
 - [03-01]: 401 Unauthorized (not 403 Forbidden) — semantically correct for missing/invalid credentials
 - [03-01]: create-api-key.py uses psycopg.connect() directly, not pool — CLI script runs once
+- [03-02]: Parameterized queries for all SMILES inputs — never string concatenation (SQL injection prevention)
+- [03-02]: SET rdkit.tanimoto_threshold per-query before every similarity search (stale threshold from pool)
+- [03-02]: <%> KNN operator for ORDER BY to leverage GiST index ordering (sub-second at 100K+)
+- [03-02]: Tanimoto threshold floor at 0.1, MAX_LIMIT=1000 — prevent full table scans and unbounded results
+- [03-02]: Sync handlers consistent with project pattern (psycopg sync, FastAPI thread pool)
 
 ### Pending Todos
 
@@ -93,5 +98,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Completed 03-01-PLAN.md
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
