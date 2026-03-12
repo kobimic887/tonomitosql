@@ -17,7 +17,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Ingestion
 
-- [ ] **INGT-01**: User can upload a CSV file via API endpoint containing SMILES and optional metadata columns
+- [x] **INGT-01**: User can upload a CSV file via API endpoint containing SMILES and optional metadata columns
 - [x] **INGT-02**: System validates every SMILES string on ingest and reports row-level errors for invalid molecules
 - [x] **INGT-03**: System canonicalizes SMILES on ingest for consistent storage and matching
 - [x] **INGT-04**: System pre-computes Morgan fingerprints (radius 2) and stores them with GiST indexes on ingest
@@ -96,7 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFR-03 | Phase 1 | ✅ Complete |
 | INFR-04 | Phase 1 | ✅ Complete |
 | INFR-05 | Phase 1 | ✅ Complete |
-| INGT-01 | Phase 2 | Pending |
+| INGT-01 | Phase 2 | ✅ Complete |
 | INGT-02 | Phase 2 | ✅ Complete |
 | INGT-03 | Phase 2 | ✅ Complete |
 | INGT-04 | Phase 2 | ✅ Complete |

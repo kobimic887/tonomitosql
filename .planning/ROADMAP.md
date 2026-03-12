@@ -13,7 +13,7 @@ TonomitoSQL goes from zero to a working molecular search API in three phases: fi
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Infrastructure & API Foundation** - Docker Compose with PostgreSQL/RDKit, FastAPI skeleton, health endpoint, database schema
-- [ ] **Phase 2: CSV Ingestion Pipeline** - Upload, validate, canonicalize SMILES, compute fingerprints, store molecules at scale
+- [x] **Phase 2: CSV Ingestion Pipeline** - Upload, validate, canonicalize SMILES, compute fingerprints, store molecules at scale
 - [ ] **Phase 3: Search & Authentication** - Exact match, Tanimoto similarity, substructure search with API key auth and error handling
 
 ## Phase Details
@@ -48,7 +48,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — rdkit-pypi dependency + ingestion service (CSV parsing, SMILES validation, batch COPY, fingerprint computation) + upload response schemas
-- [ ] 02-02-PLAN.md — POST /upload endpoint router, wire into FastAPI app, large file upload handling
+- [x] 02-02-PLAN.md — POST /upload endpoint router, wire into FastAPI app, large file upload handling
 
 ### Phase 3: Search & Authentication
 **Goal**: Users can query the molecular database by exact match, Tanimoto similarity, or substructure pattern, with all endpoints protected by API key authentication and returning clear error messages
@@ -75,5 +75,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure & API Foundation | 2/2 | Complete | 2026-03-12 |
-| 2. CSV Ingestion Pipeline | 1/2 | In Progress | - |
+| 2. CSV Ingestion Pipeline | 2/2 | Complete | 2026-03-12 |
 | 3. Search & Authentication | 0/3 | Not started | - |
