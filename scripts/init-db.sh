@@ -51,6 +51,15 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     -- GiST index on Morgan fingerprint for Tanimoto similarity
     CREATE INDEX IF NOT EXISTS idx_fps_mfp2 ON fingerprints USING gist(mfp2);
 
+    -- API key storage for authentication
+    CREATE TABLE IF NOT EXISTS api_keys (
+        id SERIAL PRIMARY KEY,
+        key_hash TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
     -- Verify schema by testing mol_from_smiles with a known molecule
     DO \$\$
     DECLARE
