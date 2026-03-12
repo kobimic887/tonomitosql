@@ -19,7 +19,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Configured in Plan 02
   api:
     build: .
     ports:
@@ -29,6 +28,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    env_file: .env
 
 volumes:
   pgdata:
