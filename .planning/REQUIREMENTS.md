@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFR-01**: System deploys via Docker Compose with a single `docker compose up` command
-- [ ] **INFR-02**: PostgreSQL container runs RDKit cartridge with `mol` and `bfp` column types available
+- [x] **INFR-01**: System deploys via Docker Compose with a single `docker compose up` command
+- [x] **INFR-02**: PostgreSQL container runs RDKit cartridge with `mol` and `bfp` column types available
 - [ ] **INFR-03**: API container runs FastAPI with Uvicorn, connects to PostgreSQL/RDKit
-- [ ] **INFR-04**: Database schema supports molecule storage with RDKit mol type and Morgan fingerprint columns with GiST indexes
-- [ ] **INFR-05**: PostgreSQL memory settings tuned for GiST index builds at 100K+ molecule scale
+- [x] **INFR-04**: Database schema supports molecule storage with RDKit mol type and Morgan fingerprint columns with GiST indexes
+- [x] **INFR-05**: PostgreSQL memory settings tuned for GiST index builds at 100K+ molecule scale
 
 ### Data Ingestion
 
@@ -91,11 +91,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFR-01 | Phase 1 | Pending |
-| INFR-02 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | ✅ Complete |
+| INFR-02 | Phase 1 | ✅ Complete |
 | INFR-03 | Phase 1 | Pending |
-| INFR-04 | Phase 1 | Pending |
-| INFR-05 | Phase 1 | Pending |
+| INFR-04 | Phase 1 | ✅ Complete |
+| INFR-05 | Phase 1 | ✅ Complete |
 | INGT-01 | Phase 2 | Pending |
 | INGT-02 | Phase 2 | Pending |
 | INGT-03 | Phase 2 | Pending |

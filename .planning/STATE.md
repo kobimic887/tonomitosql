@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 ## Current Position
 
 Phase: 1 of 3 (Infrastructure & API Foundation)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-12 — Roadmap created
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-03-12 — Completed 01-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 14%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 3 min
+- Total execution time: 0.05 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-infrastructure | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: -
-- Trend: -
+- Last 5 plans: 01-01 (3 min)
+- Trend: Starting
 
 *Updated after each plan completion*
 
@@ -44,6 +44,10 @@ Recent decisions affecting current work:
 
 - [Roadmap]: 3-phase quick-depth structure — Infrastructure → Ingestion → Search+Auth
 - [Roadmap]: API auth (API-01) merged into Phase 3 with search rather than standalone phase
+- [01-01]: Used informaticsmatters/rdkit-cartridge-debian:Release_2024_09_3 (verified latest tag)
+- [01-01]: Port 5432 not exposed to host — API connects via Docker network only
+- [01-01]: Separate fingerprints table with mfp2 bfp column (ChEMBL pattern)
+- [01-01]: metadata JSONB column on molecules for arbitrary CSV column storage
 
 ### Pending Todos
 
@@ -51,12 +55,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Research]: RDKit cartridge Docker image tag needs verification during Phase 1 (Release_2025_03_3 vs actual latest)
+- ~~[Research]: RDKit cartridge Docker image tag needs verification during Phase 1 (Release_2025_03_3 vs actual latest)~~ → Resolved: using Release_2024_09_3
 - [Research]: Connection pooling + `tanimoto_threshold` session variable isolation — verify during Phase 3 planning
 - [Research]: Large CSV upload may timeout at 100K+ rows — validate during Phase 2 implementation
 
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Roadmap created, ready to plan Phase 1
+Stopped at: Completed 01-01-PLAN.md
 Resume file: None

@@ -74,6 +74,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure & API Foundation | 0/2 | Planned | - |
+| 1. Infrastructure & API Foundation | 1/2 | In Progress | - |
 | 2. CSV Ingestion Pipeline | 0/2 | Not started | - |
 | 3. Search & Authentication | 0/3 | Not started | - |
