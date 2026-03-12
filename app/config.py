@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     api_title: str = "TonomitoSQL"
     api_description: str = "Molecular search API powered by PostgreSQL + RDKit"
 
+    # Upload settings
+    max_upload_size: int = 1_073_741_824  # 1GB in bytes — sufficient for ~3M row CSV
+
     model_config = {"env_file": ".env"}
 
 
