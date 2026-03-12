@@ -3,5 +3,5 @@ uvicorn[standard]==0.41.0
 pydantic==2.12.5
 pydantic-settings==2.13.1
 psycopg[binary]==3.3.3
+psycopg-pool
 python-multipart
-rdkit-pypi

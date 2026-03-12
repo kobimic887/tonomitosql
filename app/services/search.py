@@ -5,13 +5,12 @@ Uses raw SQL with parameterized queries for all RDKit operations:
 - Tanimoto similarity: % operator + tanimoto_sml() with SET rdkit.tanimoto_threshold
 - Substructure: @> operator (substructure containment)
 
-All SMILES inputs are validated with RDKit Python before querying.
+SMILES validation and canonicalization is performed by PostgreSQL's RDKit cartridge
+(mol_from_smiles) rather than Python-side rdkit-pypi, for ARM (aarch64) compatibility.
 All queries use parameterized %s placeholders — never string concatenation.
 """
 
 import logging
-
-from rdkit import Chem
 
 from app.db.session import get_db
 from app.models.schemas import MoleculeResult, SearchResponse
@@ -27,7 +26,11 @@ DEFAULT_TANIMOTO_THRESHOLD = 0.5
 
 
 def _validate_query_smiles(smiles: str) -> str:
-    """Validate and canonicalize a query SMILES string.
+    """Validate and canonicalize a query SMILES string using the RDKit cartridge.
+
+    Delegates to PostgreSQL's mol_from_smiles() for validation and
+    mol_to_smiles() for canonicalization. This avoids rdkit-pypi which
+    has no ARM (aarch64) wheels.
 
     Returns the canonical SMILES on success.
     Raises ValueError with descriptive message on failure.
@@ -36,11 +39,18 @@ def _validate_query_smiles(smiles: str) -> str:
     if not smiles:
         raise ValueError("Empty SMILES string")
 
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT mol_to_smiles(mol_from_smiles(%s::cstring))",
+                (smiles,),
+            )
+            row = cur.fetchone()
+
+    if row is None or row[0] is None:
         raise ValueError(f"Invalid SMILES: '{smiles}' could not be parsed by RDKit")
 
-    return Chem.MolToSmiles(mol)
+    return row[0]
 
 
 def _clamp_pagination(offset: int, limit: int) -> tuple[int, int]:

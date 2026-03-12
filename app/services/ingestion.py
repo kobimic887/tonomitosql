@@ -1,7 +1,11 @@
 """CSV ingestion service for molecular data.
 
-Pipeline: CSV file → streaming parse → SMILES validation → batch COPY to staging
-→ SQL mol conversion → fingerprint computation → cleanup staging.
+Pipeline: CSV file → streaming parse → basic SMILES validation → batch COPY to staging
+→ SQL mol_from_smiles conversion + validation → fingerprint computation → cleanup staging.
+
+SMILES chemical validation is performed entirely by the PostgreSQL RDKit cartridge
+(mol_from_smiles). Python-side validation is limited to empty/whitespace checks.
+This avoids the rdkit-pypi dependency which has no ARM (aarch64) wheels.
 """
 import csv
 import io
@@ -9,7 +13,6 @@ import json
 import logging
 from typing import BinaryIO
 
-from rdkit import Chem
 from psycopg import sql
 
 from app.db.session import get_db
@@ -59,21 +62,17 @@ def _build_metadata(headers: list[str], row: list[str], smiles_idx: int) -> dict
 
 
 def _validate_smiles(smiles_str: str) -> tuple[str | None, str | None]:
-    """Validate and canonicalize a SMILES string.
+    """Basic SMILES string validation (non-empty check only).
 
-    Returns (canonical_smiles, None) on success or (None, error_reason) on failure.
+    Chemical validation and canonicalization is delegated to PostgreSQL's
+    mol_from_smiles() during the staging → molecules transfer step.
+
+    Returns (smiles, None) on success or (None, error_reason) on failure.
     """
     smiles_str = smiles_str.strip()
     if not smiles_str:
         return None, "Empty SMILES string"
-    try:
-        mol = Chem.MolFromSmiles(smiles_str)
-        if mol is None:
-            return None, "RDKit could not parse SMILES"
-        canonical = Chem.MolToSmiles(mol)
-        return canonical, None
-    except Exception as e:
-        return None, f"SMILES validation error: {str(e)}"
+    return smiles_str, None
 
 
 def _create_staging_table(conn) -> None:
@@ -82,32 +81,31 @@ def _create_staging_table(conn) -> None:
         cur.execute("""
             CREATE TEMP TABLE IF NOT EXISTS staging_molecules (
                 original_smiles TEXT NOT NULL,
-                canonical_smiles TEXT NOT NULL,
                 metadata JSONB DEFAULT '{}'::jsonb
             ) ON COMMIT DROP
         """)
 
 
-def _copy_batch_to_staging(conn, batch: list[tuple[str, str, str]]) -> None:
+def _copy_batch_to_staging(conn, batch: list[tuple[str, str]]) -> None:
     """COPY a batch of validated rows into the staging table.
 
-    Each tuple is (original_smiles, canonical_smiles, metadata_json).
+    Each tuple is (original_smiles, metadata_json).
     Uses psycopg's COPY protocol for maximum throughput.
     """
     with conn.cursor() as cur:
         with cur.copy(
-            "COPY staging_molecules (original_smiles, canonical_smiles, metadata) FROM STDIN"
+            "COPY staging_molecules (original_smiles, metadata) FROM STDIN"
         ) as copy:
-            for original_smiles, canonical_smiles, metadata_json in batch:
-                copy.write_row((original_smiles, canonical_smiles, metadata_json))
+            for original_smiles, metadata_json in batch:
+                copy.write_row((original_smiles, metadata_json))
 
 
 def _transfer_staging_to_molecules(conn, dataset_id: int) -> int:
     """Move validated molecules from staging into the molecules table.
 
-    Uses mol_from_smiles in SQL to create mol objects. Rows where
-    mol_from_smiles returns NULL are silently skipped (double safety net
-    after Python-side validation).
+    Uses mol_from_smiles in SQL to create mol objects and mol_to_smiles
+    to compute the canonical SMILES. Rows where mol_from_smiles returns
+    NULL are skipped (invalid SMILES rejected by RDKit cartridge).
 
     Returns the number of rows inserted.
     """
@@ -117,11 +115,11 @@ def _transfer_staging_to_molecules(conn, dataset_id: int) -> int:
             SELECT
                 %(dataset_id)s,
                 original_smiles,
-                mol_from_smiles(canonical_smiles::cstring),
-                canonical_smiles,
+                mol_from_smiles(original_smiles::cstring),
+                mol_to_smiles(mol_from_smiles(original_smiles::cstring)),
                 metadata
             FROM staging_molecules
-            WHERE mol_from_smiles(canonical_smiles::cstring) IS NOT NULL
+            WHERE mol_from_smiles(original_smiles::cstring) IS NOT NULL
         """, {"dataset_id": dataset_id})
         return cur.rowcount
 
@@ -165,9 +163,10 @@ def ingest_csv(
 
     Pipeline:
     1. Stream-parse CSV to identify SMILES column and metadata columns
-    2. Validate each SMILES with RDKit Python (row-level error collection)
+    2. Basic SMILES validation (non-empty check; chemical validation in SQL)
     3. Batch COPY valid rows into a temporary staging table (5000 rows per batch)
     4. Transfer from staging to molecules table with mol_from_smiles in SQL
+       (invalid SMILES rejected here by the RDKit cartridge)
     5. Compute Morgan fingerprints (radius 2) for all new molecules
     6. Update dataset record with final counts
 
@@ -238,7 +237,7 @@ def ingest_csv(
 
                 raw_smiles = row[smiles_idx].strip()
 
-                # Validate and canonicalize
+                # Validate SMILES (basic non-empty check; chemical validation in SQL)
                 canonical, error_reason = _validate_smiles(raw_smiles)
                 if error_reason:
                     errors.append(RowError(
@@ -252,7 +251,7 @@ def ingest_csv(
                 metadata = _build_metadata(headers, row, smiles_idx)
                 metadata_json = json.dumps(metadata)
 
-                batch.append((raw_smiles, canonical, metadata_json))
+                batch.append((canonical, metadata_json))
                 valid_count += 1
 
                 # Flush batch when full
