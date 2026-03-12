@@ -91,33 +91,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFR-01 | Phase ? | Pending |
-| INFR-02 | Phase ? | Pending |
-| INFR-03 | Phase ? | Pending |
-| INFR-04 | Phase ? | Pending |
-| INFR-05 | Phase ? | Pending |
-| INGT-01 | Phase ? | Pending |
-| INGT-02 | Phase ? | Pending |
-| INGT-03 | Phase ? | Pending |
-| INGT-04 | Phase ? | Pending |
-| INGT-05 | Phase ? | Pending |
-| INGT-06 | Phase ? | Pending |
-| SRCH-01 | Phase ? | Pending |
-| SRCH-02 | Phase ? | Pending |
-| SRCH-03 | Phase ? | Pending |
-| SRCH-04 | Phase ? | Pending |
-| SRCH-05 | Phase ? | Pending |
-| SRCH-06 | Phase ? | Pending |
-| API-01 | Phase ? | Pending |
-| API-02 | Phase ? | Pending |
-| API-03 | Phase ? | Pending |
-| API-04 | Phase ? | Pending |
+| INFR-01 | Phase 1 | Pending |
+| INFR-02 | Phase 1 | Pending |
+| INFR-03 | Phase 1 | Pending |
+| INFR-04 | Phase 1 | Pending |
+| INFR-05 | Phase 1 | Pending |
+| INGT-01 | Phase 2 | Pending |
+| INGT-02 | Phase 2 | Pending |
+| INGT-03 | Phase 2 | Pending |
+| INGT-04 | Phase 2 | Pending |
+| INGT-05 | Phase 2 | Pending |
+| INGT-06 | Phase 2 | Pending |
+| SRCH-01 | Phase 3 | Pending |
+| SRCH-02 | Phase 3 | Pending |
+| SRCH-03 | Phase 3 | Pending |
+| SRCH-04 | Phase 3 | Pending |
+| SRCH-05 | Phase 3 | Pending |
+| SRCH-06 | Phase 3 | Pending |
+| API-01 | Phase 3 | Pending |
+| API-02 | Phase 1 | Pending |
+| API-03 | Phase 3 | Pending |
+| API-04 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-12*
-*Last updated: 2026-03-12 after initial definition*
+*Last updated: 2026-03-12 after roadmap creation*
