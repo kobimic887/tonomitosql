@@ -10,21 +10,24 @@ The SHA-256 hash is stored in the api_keys table.
 """
 import argparse
 import hashlib
+import os
 import secrets
-import sys
 
 import psycopg
-
-from app.config import settings
 
 
 def create_api_key(name: str) -> str:
     """Generate a random API key, store its hash, return the raw key."""
+    database_url = os.environ.get(
+        "DATABASE_URL",
+        "postgresql://tonomito:tonomito_dev@db:5432/tonomitosql",
+    )
+
     # Generate a 32-byte (256-bit) random key, URL-safe base64 encoded
     raw_key = secrets.token_urlsafe(32)
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
 
-    with psycopg.connect(settings.database_url) as conn:
+    with psycopg.connect(database_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO api_keys (key_hash, name) VALUES (%s, %s) RETURNING id",
