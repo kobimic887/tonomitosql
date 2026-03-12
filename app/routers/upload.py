@@ -1,10 +1,11 @@
 """CSV upload endpoint for molecular data ingestion."""
 import logging
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.dependencies import require_api_key
 from app.models.schemas import UploadResponse
 from app.services.ingestion import ingest_csv
 
@@ -28,6 +29,7 @@ router = APIRouter(tags=["Upload"])
 async def upload_csv(
     file: UploadFile = File(..., description="CSV file with SMILES column"),
     dataset_name: str | None = None,
+    api_key_name: str = Depends(require_api_key),
 ):
     """Upload a CSV file for molecular ingestion.
 
@@ -68,8 +70,8 @@ async def upload_csv(
         )
 
         logger.info(
-            "Upload complete: dataset_id=%d, valid=%d, invalid=%d",
-            result.dataset_id, result.valid_count, result.invalid_count,
+            "Upload complete (key=%s): dataset_id=%d, valid=%d, invalid=%d",
+            api_key_name, result.dataset_id, result.valid_count, result.invalid_count,
         )
 
         # Return 201 Created for successful ingestion
