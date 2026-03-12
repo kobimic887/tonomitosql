@@ -80,7 +80,7 @@ def validate_query_smiles(smiles: str) -> str:
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT mol_to_smiles(mol_from_smiles(%s::cstring))",
+                    "SELECT mol_to_smiles(mol_from_smiles(%s::cstring))::text",
                     (smiles,),
                 )
                 row = cur.fetchone()
@@ -89,4 +89,4 @@ def validate_query_smiles(smiles: str) -> str:
             raise ValueError(
                 f"Invalid SMILES: '{smiles}' could not be parsed by RDKit"
             )
-        return row[0]
+        return str(row[0])

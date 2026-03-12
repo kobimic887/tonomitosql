@@ -120,7 +120,7 @@ def _transfer_staging_to_molecules(conn, dataset_id: int) -> int:
                 %(dataset_id)s,
                 original_smiles,
                 mol_from_smiles(canonical_smiles::cstring),
-                mol_to_smiles(mol_from_smiles(canonical_smiles::cstring)),
+                mol_to_smiles(mol_from_smiles(canonical_smiles::cstring))::text,
                 metadata
             FROM staging_molecules
             WHERE mol_from_smiles(canonical_smiles::cstring) IS NOT NULL
