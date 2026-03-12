@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Database has `molecules` and `fingerprints` tables with `mol` and `bfp` column types and GiST indexes defined
   4. API auto-generates browsable OpenAPI/Swagger documentation at `/docs`
   5. PostgreSQL memory settings are configured for GiST index builds at 100K+ scale (not default 128MB shared_buffers)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Docker Compose + PostgreSQL/RDKit container + schema + memory tuning
+- [ ] 01-02-PLAN.md — FastAPI skeleton + health endpoint + OpenAPI docs
 
 ### Phase 2: CSV Ingestion Pipeline
 **Goal**: Users can upload a CSV file containing SMILES and get back a detailed report of what was ingested, what failed validation, and have all valid molecules stored with pre-computed fingerprints ready for search
@@ -74,6 +74,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure & API Foundation | 0/2 | Not started | - |
+| 1. Infrastructure & API Foundation | 0/2 | Planned | - |
 | 2. CSV Ingestion Pipeline | 0/2 | Not started | - |
 | 3. Search & Authentication | 0/3 | Not started | - |
