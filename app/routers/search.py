@@ -5,13 +5,14 @@ Provides three search types:
 - GET /search/similarity — Find similar molecules by Tanimoto coefficient
 - GET /search/substructure — Find molecules containing a substructure pattern
 
-Auth protection is added in Plan 03-03.
+All endpoints require a valid API key via X-API-Key header.
 """
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.dependencies import require_api_key
 from app.models.schemas import SearchResponse
 from app.services import search as search_service
 
@@ -37,8 +38,10 @@ def search_exact(
         description="SMILES string to search for",
         examples=["c1ccccc1", "CCO", "CC(=O)Oc1ccccc1C(=O)O"],
     ),
+    api_key_name: str = Depends(require_api_key),
 ):
     """Search for an exact SMILES match."""
+    logger.info("Search exact (key=%s): %s", api_key_name, smiles)
     try:
         result = search_service.exact_match(smiles)
         return result
@@ -74,8 +77,10 @@ def search_similarity(
     limit: int = Query(
         100, ge=1, le=1000, description="Maximum results to return (max 1000)"
     ),
+    api_key_name: str = Depends(require_api_key),
 ):
     """Search by Tanimoto similarity with configurable threshold."""
+    logger.info("Search similarity (key=%s): %s (threshold=%s)", api_key_name, smiles, threshold)
     try:
         result = search_service.similarity_search(
             smiles=smiles,
@@ -109,8 +114,10 @@ def search_substructure(
     limit: int = Query(
         100, ge=1, le=1000, description="Maximum results to return (max 1000)"
     ),
+    api_key_name: str = Depends(require_api_key),
 ):
     """Search for molecules containing a substructure pattern."""
+    logger.info("Search substructure (key=%s): %s", api_key_name, smiles)
     try:
         result = search_service.substructure_search(
             smiles=smiles,
