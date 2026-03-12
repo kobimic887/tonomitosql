@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Given a SMILES query, return chemically similar molecules ranked by Tanimoto similarity from a user-uploaded molecular database — fast, accurate, and at scale (100K+ molecules).
-**Current focus:** Phase 1: Infrastructure & API Foundation
+**Current focus:** Phase 2: CSV Ingestion Pipeline
 
 ## Current Position
 
-Phase: 1 of 3 (Infrastructure & API Foundation) — COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-03-12 — Completed 01-02-PLAN.md
+Phase: 2 of 3 (CSV Ingestion Pipeline) — PLANNED
+Plan: 0 of 2 in current phase
+Status: Plans created, ready for execution
+Last activity: 2026-03-12 — Created Phase 2 plans (02-01, 02-02)
 
 Progress: [███░░░░░░░] 29%
 
@@ -79,5 +79,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Completed 01-02-PLAN.md (Phase 1 complete)
+Stopped at: Created Phase 2 plans (02-01, 02-02) — ready for execution
 Resume file: None

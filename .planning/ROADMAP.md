@@ -44,11 +44,11 @@ Plans:
   3. Arbitrary metadata columns from the CSV are stored as JSONB alongside each molecule
   4. A 100K-row CSV file completes ingestion without timeout or failure (using COPY protocol)
   5. After ingestion, molecules have Morgan fingerprints (radius 2) stored with GiST indexes ready for similarity search
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — rdkit-pypi dependency + ingestion service (CSV parsing, SMILES validation, batch COPY, fingerprint computation) + upload response schemas
+- [ ] 02-02-PLAN.md — POST /upload endpoint router, wire into FastAPI app, large file upload handling
 
 ### Phase 3: Search & Authentication
 **Goal**: Users can query the molecular database by exact match, Tanimoto similarity, or substructure pattern, with all endpoints protected by API key authentication and returning clear error messages
