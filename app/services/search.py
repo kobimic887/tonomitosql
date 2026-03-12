@@ -12,6 +12,8 @@ All queries use parameterized %s placeholders — never string concatenation.
 
 import logging
 
+from psycopg import sql
+
 from app.chem import validate_query_smiles
 from app.db.session import get_db
 from app.models.schemas import MoleculeResult, SearchResponse
@@ -133,7 +135,13 @@ def similarity_search(
             # CRITICAL: Set tanimoto_threshold per-query for correct GiST index usage.
             # This is a session-level variable. The connection pool returns connections
             # to the pool after use, so we must set it every time.
-            cur.execute("SET rdkit.tanimoto_threshold = %s", (threshold,))
+            # NOTE: SET does not support parameterized $1 placeholders, so we use
+            # sql.Literal for safe value interpolation.
+            cur.execute(
+                sql.SQL("SET rdkit.tanimoto_threshold = {}").format(
+                    sql.Literal(threshold)
+                )
+            )
 
             cur.execute(
                 """

@@ -89,4 +89,8 @@ def validate_query_smiles(smiles: str) -> str:
             raise ValueError(
                 f"Invalid SMILES: '{smiles}' could not be parsed by RDKit"
             )
-        return str(row[0])
+        result = row[0]
+        # mol_to_smiles() can return bytes/memoryview even with ::text cast
+        if isinstance(result, (bytes, memoryview)):
+            return bytes(result).decode("utf-8")
+        return str(result)
