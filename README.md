@@ -1,6 +1,6 @@
 # TonomitoSQL
 
-Molecular search API powered by PostgreSQL + RDKit. Upload CSV datasets of molecules, then run exact, substructure, and similarity searches using the RDKit cartridge — all through an authenticated REST API.
+Molecular search API powered by PostgreSQL + RDKit. Upload CSV datasets of molecules, then run exact, substructure, and similarity searches using the RDKit cartridge — all through a REST API.
 
 ## Stack
 
@@ -8,7 +8,6 @@ Molecular search API powered by PostgreSQL + RDKit. Upload CSV datasets of molec
 - **Database:** PostgreSQL with [RDKit cartridge](https://www.rdkit.org/docs/Cartridge.html)
 - **Connection:** psycopg3 connection pool (sync, no ORM)
 - **Containers:** Docker Compose
-- **Auth:** API key (SHA-256 hash stored in DB) with rate limiting
 
 ## Quick Start
 
@@ -19,37 +18,27 @@ docker compose up -d
 
 The API starts at `http://localhost:8000`. The database initializes automatically on first run (RDKit extension, schema, indexes).
 
-### Generate an API Key
-
-```bash
-docker compose exec api python scripts/create-api-key.py
-```
-
-Save the generated key — it is only shown once. Use it in the `X-API-Key` header for all authenticated endpoints.
-
 ## API Endpoints (v1.1)
 
-All endpoints except `/health` and `/docs` require an `X-API-Key` header.
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/health` | No | API version, DB status, RDKit version, molecule count |
-| GET | `/docs` | No | Swagger UI (auto-generated) |
-| POST | `/v1/upload` | Yes | Upload a CSV file with SMILES column |
-| GET | `/v1/search/exact` | Yes | Exact molecular match (`@=` operator) |
-| GET | `/v1/search/similarity` | Yes | Tanimoto similarity search (Morgan FP, ECFP4) |
-| GET | `/v1/search/substructure` | Yes | Substructure containment search (`@>` operator) |
-| POST | `/v1/search/batch` | Yes | Batch search (up to 100 SMILES per request) |
-| GET | `/v1/datasets` | Yes | List all datasets |
-| GET | `/v1/datasets/{id}` | Yes | Get dataset details |
-| DELETE | `/v1/datasets/{id}` | Yes | Delete dataset + molecules (CASCADE) |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | API version, DB status, RDKit version, molecule count |
+| GET | `/docs` | Swagger UI (auto-generated) |
+| POST | `/v1/upload` | Upload a CSV file with SMILES column |
+| GET | `/v1/search/exact` | Exact molecular match (`@=` operator) |
+| GET | `/v1/search/similarity` | Tanimoto similarity search (Morgan FP, ECFP4) |
+| GET | `/v1/search/substructure` | Substructure containment search (`@>` operator) |
+| POST | `/v1/search/batch` | Batch search (up to 100 SMILES per request) |
+| GET | `/v1/datasets` | List all datasets |
+| GET | `/v1/datasets/{id}` | Get dataset details |
+| DELETE | `/v1/datasets/{id}` | Delete dataset + molecules (CASCADE) |
 
 ### Search Parameters
 
 **Exact:** `?smiles=CCO`
 
 **Similarity:** `?smiles=CCO&threshold=0.5&offset=0&limit=100`
-- `threshold` (0.1–1.0): Minimum Tanimoto coefficient
+- `threshold` (0.1-1.0): Minimum Tanimoto coefficient
 
 **Substructure:** `?smiles=c1ccccc1&offset=0&limit=100`
 
@@ -59,7 +48,6 @@ All endpoints except `/health` and `/docs` require an `X-API-Key` header.
 
 ```bash
 curl -X POST http://localhost:8000/v1/search/batch \
-  -H "X-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "smiles_list": ["CCO", "c1ccccc1"],
@@ -71,12 +59,11 @@ curl -X POST http://localhost:8000/v1/search/batch \
 
 ## Database Schema
 
-Four tables created automatically by `scripts/init-db.sh`:
+Three tables created automatically by `scripts/init-db.sh`:
 
 - **datasets** — tracks CSV uploads (name, filename, row count, timestamp)
 - **molecules** — SMILES strings stored as RDKit `mol` type with GiST index
 - **fingerprints** — Morgan fingerprints (radius 2, `bfp` type) with GiST index
-- **api_keys** — SHA-256 hashed API keys with active/inactive status
 
 ## Project Structure
 
@@ -85,10 +72,9 @@ app/
   main.py              # FastAPI app with lifespan, /v1 prefix routing
   config.py            # Settings via pydantic-settings (no defaults for secrets)
   chem.py              # RDKit Python wrapper with ARM fallback
-  dependencies.py      # API key auth + rate limiting
   db/session.py        # psycopg connection pool (min=2, max=10)
   routers/
-    health.py          # GET /health (public)
+    health.py          # GET /health
     upload.py          # POST /v1/upload
     search.py          # GET /v1/search/*, POST /v1/search/batch
     datasets.py        # GET/DELETE /v1/datasets/*
@@ -99,7 +85,6 @@ app/
 scripts/
   init-db.sh           # Schema + RDKit extension setup
   postgresql.conf      # Tuned for cheminformatics (shared_buffers=2GB, work_mem=64MB)
-  create-api-key.py    # Generate API key
 docker-compose.yml
 Dockerfile
 ```
@@ -124,10 +109,8 @@ PostgreSQL is tuned for cheminformatics workloads in `scripts/postgresql.conf`:
 - `work_mem` = 64MB
 - `maintenance_work_mem` = 2048MB
 
-## Security
+## Safety
 
-- API keys stored as SHA-256 hashes (plain keys never persisted)
-- Rate limiting on authentication: 20 failed attempts per 60s window per IP → 429
 - Database port (5432) not exposed to host — API-only access via Docker network
 - No default credentials — `.env` is required and gitignored
 - 30s statement timeout on all search queries (prevents runaway queries)

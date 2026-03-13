@@ -8,9 +8,8 @@ Provides CRUD operations for uploaded datasets:
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from app.dependencies import require_api_key
 from app.db.session import get_db
 from app.models.schemas import DatasetResponse, DatasetListResponse
 
@@ -25,7 +24,7 @@ router = APIRouter(prefix="/datasets", tags=["Datasets"])
     summary="List all datasets",
     description="Returns all datasets with their names, filenames, row counts, and creation timestamps.",
 )
-def list_datasets(api_key_name: str = Depends(require_api_key)):
+def list_datasets():
     """List all uploaded datasets."""
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -56,7 +55,7 @@ def list_datasets(api_key_name: str = Depends(require_api_key)):
     summary="Get dataset details",
     description="Returns details for a single dataset by ID.",
 )
-def get_dataset(dataset_id: int, api_key_name: str = Depends(require_api_key)):
+def get_dataset(dataset_id: int):
     """Get a single dataset by ID."""
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -90,9 +89,9 @@ def get_dataset(dataset_id: int, api_key_name: str = Depends(require_api_key)):
         "This is irreversible. Uses ON DELETE CASCADE from the schema."
     ),
 )
-def delete_dataset(dataset_id: int, api_key_name: str = Depends(require_api_key)):
+def delete_dataset(dataset_id: int):
     """Delete a dataset and all its molecules (CASCADE)."""
-    logger.info("Deleting dataset %d (key=%s)", dataset_id, api_key_name)
+    logger.info("Deleting dataset %d", dataset_id)
 
     with get_db() as conn:
         with conn.cursor() as cur:

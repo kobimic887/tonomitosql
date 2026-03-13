@@ -5,15 +5,13 @@ Provides three search types:
 - GET /search/similarity — Find similar molecules by Tanimoto coefficient
 - GET /search/substructure — Find molecules containing a substructure pattern
 
-All endpoints require a valid API key via X-API-Key header.
 All endpoints accept an optional dataset_id filter to scope searches.
 """
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 
-from app.dependencies import require_api_key
 from app.models.schemas import (
     BatchSearchRequest,
     BatchSearchResponse,
@@ -48,10 +46,9 @@ def search_exact(
     dataset_id: int | None = Query(
         None, description="Optional dataset ID to scope search"
     ),
-    api_key_name: str = Depends(require_api_key),
 ):
     """Search for an exact SMILES match."""
-    logger.info("Search exact (key=%s): %s", api_key_name, smiles)
+    logger.info("Search exact: %s", smiles)
     try:
         result = search_service.exact_match(smiles, dataset_id=dataset_id)
         return result
@@ -90,10 +87,9 @@ def search_similarity(
     dataset_id: int | None = Query(
         None, description="Optional dataset ID to scope search"
     ),
-    api_key_name: str = Depends(require_api_key),
 ):
     """Search by Tanimoto similarity with configurable threshold."""
-    logger.info("Search similarity (key=%s): %s (threshold=%s)", api_key_name, smiles, threshold)
+    logger.info("Search similarity: %s (threshold=%s)", smiles, threshold)
     try:
         result = search_service.similarity_search(
             smiles=smiles,
@@ -131,10 +127,9 @@ def search_substructure(
     dataset_id: int | None = Query(
         None, description="Optional dataset ID to scope search"
     ),
-    api_key_name: str = Depends(require_api_key),
 ):
     """Search for molecules containing a substructure pattern."""
-    logger.info("Search substructure (key=%s): %s", api_key_name, smiles)
+    logger.info("Search substructure: %s", smiles)
     try:
         result = search_service.substructure_search(
             smiles=smiles,
@@ -160,12 +155,11 @@ def search_substructure(
 )
 def search_batch(
     body: BatchSearchRequest,
-    api_key_name: str = Depends(require_api_key),
 ):
     """Batch search for multiple SMILES queries."""
     logger.info(
-        "Batch search (key=%s): %d queries, type=%s",
-        api_key_name, len(body.smiles_list), body.search_type,
+        "Batch search: %d queries, type=%s",
+        len(body.smiles_list), body.search_type,
     )
 
     results: list[BatchSearchResultItem] = []
