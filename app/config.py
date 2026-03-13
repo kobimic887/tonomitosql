@@ -2,8 +2,11 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql://tonomito:tonomito_dev@db:5432/tonomitosql"
-    api_version: str = "0.1.0"
+    # REQUIRED — no default. App fails fast at startup if DATABASE_URL is not set.
+    # Never hardcode credentials as fallback defaults.
+    database_url: str
+
+    api_version: str = "1.1.0"
     api_title: str = "TonomitoSQL"
     api_description: str = "Molecular search API powered by PostgreSQL + RDKit"
 
@@ -12,6 +15,9 @@ class Settings(BaseSettings):
 
     # Server settings
     web_workers: int = 4  # Uvicorn worker count (override with WEB_WORKERS env var)
+
+    # Logging
+    log_level: str = "INFO"  # Override with LOG_LEVEL env var
 
     model_config = {"env_file": ".env"}
 

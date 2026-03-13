@@ -13,7 +13,7 @@ import json
 import logging
 from typing import BinaryIO
 
-from app.chem import validate_smiles, HAS_RDKIT
+from app.chem import validate_smiles
 from app.db.session import get_db
 from app.models.schemas import RowError, UploadResponse
 
@@ -62,18 +62,6 @@ def _build_metadata(headers: list[str], row: list[str], smiles_idx: int) -> dict
         if key:
             metadata[key] = row[i].strip() if i < len(row) else ""
     return metadata
-
-
-def _validate_smiles(smiles_str: str) -> tuple[str | None, str | None]:
-    """Validate a SMILES string using rdkit-pypi if available, else basic check.
-
-    When rdkit-pypi is available: validates and canonicalizes Python-side.
-    When unavailable (ARM): only checks for empty strings; chemical
-    validation happens SQL-side via mol_from_smiles().
-
-    Returns (smiles_or_canonical, None) on success or (None, error_reason) on failure.
-    """
-    return validate_smiles(smiles_str)
 
 
 def _create_staging_table(conn) -> None:
@@ -192,112 +180,120 @@ def ingest_csv(
     valid_count = 0
     error_count = 0
 
-    # Wrap binary file in text reader for csv module
+    # Wrap binary file in text reader for csv module.
+    # IMPORTANT: detach() in finally block to release the binary stream
+    # without closing it — FastAPI's UploadFile handles closing.
     text_stream = io.TextIOWrapper(file, encoding="utf-8", errors="replace")
-    reader = csv.reader(text_stream)
-
-    # Read and validate headers
     try:
-        headers = next(reader)
-    except StopIteration:
-        raise ValueError("CSV file is empty — no header row found")
+        reader = csv.reader(text_stream)
 
-    smiles_idx = _detect_smiles_column(headers)
-    logger.info(
-        "CSV headers: %s, SMILES column: %s (index %d)",
-        headers, headers[smiles_idx], smiles_idx,
-    )
+        # Read and validate headers
+        try:
+            headers = next(reader)
+        except StopIteration:
+            raise ValueError("CSV file is empty — no header row found")
 
-    with get_db() as conn:
-        # Use a single transaction for the entire ingestion
-        with conn.transaction():
-            # 1. Create dataset record
-            with conn.cursor() as cur:
-                cur.execute(
-                    """INSERT INTO datasets (name, filename)
-                       VALUES (%(name)s, %(filename)s) RETURNING id""",
-                    {"name": dataset_name, "filename": filename},
-                )
-                dataset_id = cur.fetchone()[0]
+        smiles_idx = _detect_smiles_column(headers)
+        logger.info(
+            "CSV headers: %s, SMILES column: %s (index %d)",
+            headers, headers[smiles_idx], smiles_idx,
+        )
 
-            # 2. Create staging table (temp, dropped on commit)
-            _create_staging_table(conn)
+        with get_db() as conn:
+            # Use a single transaction for the entire ingestion
+            with conn.transaction():
+                # 1. Create dataset record
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO datasets (name, filename)
+                           VALUES (%(name)s, %(filename)s) RETURNING id""",
+                        {"name": dataset_name, "filename": filename},
+                    )
+                    dataset_id = cur.fetchone()[0]
 
-            # 3. Stream CSV, validate SMILES, batch COPY to staging
-            batch: list[tuple[str, str, str]] = []
+                # 2. Create staging table (temp, dropped on commit)
+                _create_staging_table(conn)
 
-            for row_num, row in enumerate(reader, start=2):  # start=2 because row 1 is header
-                total_rows += 1
+                # 3. Stream CSV, validate SMILES, batch COPY to staging
+                batch: list[tuple[str, str, str]] = []
 
-                # Skip empty rows
-                if not row or all(cell.strip() == "" for cell in row):
-                    continue
+                for row_num, row in enumerate(reader, start=2):  # start=2 because row 1 is header
+                    total_rows += 1
 
-                # Extract SMILES
-                if smiles_idx >= len(row):
-                    error_count += 1
-                    if len(errors) < MAX_ERRORS:
-                        errors.append(RowError(
-                            row=row_num,
-                            smiles="",
-                            reason=f"Row has {len(row)} columns, SMILES column is at index {smiles_idx}",
-                        ))
-                    continue
+                    # Skip empty rows
+                    if not row or all(cell.strip() == "" for cell in row):
+                        continue
 
-                raw_smiles = row[smiles_idx].strip()
+                    # Extract SMILES
+                    if smiles_idx >= len(row):
+                        error_count += 1
+                        if len(errors) < MAX_ERRORS:
+                            errors.append(RowError(
+                                row=row_num,
+                                smiles="",
+                                reason=f"Row has {len(row)} columns, SMILES column is at index {smiles_idx}",
+                            ))
+                        continue
 
-                # Validate SMILES (rdkit-pypi if available, else basic check)
-                canonical, error_reason = _validate_smiles(raw_smiles)
-                if error_reason:
-                    error_count += 1
-                    if len(errors) < MAX_ERRORS:
-                        errors.append(RowError(
-                            row=row_num,
-                            smiles=raw_smiles,
-                            reason=error_reason,
-                        ))
-                    continue
+                    raw_smiles = row[smiles_idx].strip()
 
-                # Build metadata from all other columns
-                metadata = _build_metadata(headers, row, smiles_idx)
-                metadata_json = json.dumps(metadata)
+                    # Validate SMILES (rdkit-pypi if available, else basic check)
+                    canonical, error_reason = validate_smiles(raw_smiles)
+                    if error_reason:
+                        error_count += 1
+                        if len(errors) < MAX_ERRORS:
+                            errors.append(RowError(
+                                row=row_num,
+                                smiles=raw_smiles,
+                                reason=error_reason,
+                            ))
+                        continue
 
-                batch.append((raw_smiles, canonical, metadata_json))
-                valid_count += 1
+                    # Build metadata from all other columns
+                    metadata = _build_metadata(headers, row, smiles_idx)
+                    metadata_json = json.dumps(metadata)
 
-                # Flush batch when full
-                if len(batch) >= BATCH_SIZE:
+                    batch.append((raw_smiles, canonical, metadata_json))
+                    valid_count += 1
+
+                    # Flush batch when full
+                    if len(batch) >= BATCH_SIZE:
+                        _copy_batch_to_staging(conn, batch)
+                        batch.clear()
+
+                # Flush remaining batch
+                if batch:
                     _copy_batch_to_staging(conn, batch)
                     batch.clear()
 
-            # Flush remaining batch
-            if batch:
-                _copy_batch_to_staging(conn, batch)
-                batch.clear()
-
-            logger.info(
-                "CSV parsed: %d total rows, %d valid, %d invalid",
-                total_rows, valid_count, error_count,
-            )
-
-            # 4. Transfer staging → molecules table (mol_from_smiles in SQL)
-            inserted = _transfer_staging_to_molecules(conn, dataset_id)
-            logger.info("Inserted %d molecules from staging", inserted)
-
-            # If SQL-side validation rejected additional rows, adjust count
-            if inserted < valid_count:
-                logger.warning(
-                    "SQL-side mol_from_smiles rejected %d additional rows",
-                    valid_count - inserted,
+                logger.info(
+                    "CSV parsed: %d total rows, %d valid, %d invalid",
+                    total_rows, valid_count, error_count,
                 )
-                valid_count = inserted
 
-            # 5. Compute Morgan fingerprints (radius 2)
-            fp_count = _compute_fingerprints(conn, dataset_id)
-            logger.info("Computed %d Morgan fingerprints", fp_count)
+                # 4. Transfer staging → molecules table (mol_from_smiles in SQL)
+                inserted = _transfer_staging_to_molecules(conn, dataset_id)
+                logger.info("Inserted %d molecules from staging", inserted)
 
-            # 6. Update dataset row count
-            _update_dataset_row_count(conn, dataset_id, valid_count)
+                # If SQL-side validation rejected additional rows, adjust count
+                if inserted < valid_count:
+                    logger.warning(
+                        "SQL-side mol_from_smiles rejected %d additional rows",
+                        valid_count - inserted,
+                    )
+                    valid_count = inserted
+
+                # 5. Compute Morgan fingerprints (radius 2)
+                fp_count = _compute_fingerprints(conn, dataset_id)
+                logger.info("Computed %d Morgan fingerprints", fp_count)
+
+                # 6. Update dataset row count
+                _update_dataset_row_count(conn, dataset_id, valid_count)
+
+    finally:
+        # Detach the TextIOWrapper so it does NOT close the underlying binary
+        # stream when garbage-collected. FastAPI's UploadFile owns that stream.
+        text_stream.detach()
 
     return UploadResponse(
         dataset_id=dataset_id,
