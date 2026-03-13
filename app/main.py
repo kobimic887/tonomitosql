@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from app.config import settings
 from app.db.session import pool
-from app.routers import health, search, upload
+from app.routers import datasets, health, search, upload
 
 logger = logging.getLogger(__name__)
 
@@ -29,3 +29,4 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(upload.router)
 app.include_router(search.router)
+app.include_router(datasets.router)

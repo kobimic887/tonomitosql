@@ -14,7 +14,13 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import require_api_key
-from app.models.schemas import SearchResponse
+from app.models.schemas import (
+    BatchSearchRequest,
+    BatchSearchResponse,
+    BatchSearchResultItem,
+    SearchResponse,
+    SearchType,
+)
 from app.services import search as search_service
 
 logger = logging.getLogger(__name__)
@@ -139,3 +145,77 @@ def search_substructure(
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/batch",
+    response_model=BatchSearchResponse,
+    summary="Batch search",
+    description=(
+        "Search for multiple SMILES in a single request. Accepts up to 100 SMILES "
+        "and runs the specified search type (exact, similarity, or substructure) "
+        "for each. Results are returned per-query. Invalid SMILES are reported "
+        "with an error field rather than failing the entire batch."
+    ),
+)
+def search_batch(
+    body: BatchSearchRequest,
+    api_key_name: str = Depends(require_api_key),
+):
+    """Batch search for multiple SMILES queries."""
+    logger.info(
+        "Batch search (key=%s): %d queries, type=%s",
+        api_key_name, len(body.smiles_list), body.search_type,
+    )
+
+    results: list[BatchSearchResultItem] = []
+
+    for smiles in body.smiles_list:
+        try:
+            if body.search_type == SearchType.exact:
+                resp = search_service.exact_match(
+                    smiles, dataset_id=body.dataset_id,
+                )
+            elif body.search_type == SearchType.similarity:
+                resp = search_service.similarity_search(
+                    smiles,
+                    threshold=body.threshold,
+                    limit=body.limit,
+                    dataset_id=body.dataset_id,
+                )
+            else:  # substructure
+                resp = search_service.substructure_search(
+                    smiles,
+                    limit=body.limit,
+                    dataset_id=body.dataset_id,
+                )
+
+            results.append(BatchSearchResultItem(
+                query_smiles=resp.query_smiles,
+                found=resp.found,
+                count=resp.count,
+                results=resp.results,
+            ))
+        except ValueError as e:
+            results.append(BatchSearchResultItem(
+                query_smiles=smiles,
+                found=False,
+                count=0,
+                results=[],
+                error=str(e),
+            ))
+        except Exception as e:
+            logger.exception("Batch search error for SMILES: %s", smiles)
+            results.append(BatchSearchResultItem(
+                query_smiles=smiles,
+                found=False,
+                count=0,
+                results=[],
+                error="Internal search error",
+            ))
+
+    return BatchSearchResponse(
+        search_type=body.search_type.value,
+        total_queries=len(body.smiles_list),
+        results=results,
+    )

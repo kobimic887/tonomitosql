@@ -1,6 +1,7 @@
+from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -59,3 +60,53 @@ class DatasetListResponse(BaseModel):
 
     datasets: list[DatasetResponse]
     count: int
+
+
+class SearchType(str, Enum):
+    """Search type for batch operations."""
+
+    exact = "exact"
+    similarity = "similarity"
+    substructure = "substructure"
+
+
+class BatchSearchRequest(BaseModel):
+    """Request body for batch search."""
+
+    smiles_list: list[str] = Field(
+        ..., min_length=1, max_length=100,
+        description="List of SMILES strings to search (max 100)",
+    )
+    search_type: SearchType = Field(
+        SearchType.similarity,
+        description="Type of search to perform",
+    )
+    threshold: float = Field(
+        0.5, ge=0.1, le=1.0,
+        description="Tanimoto threshold (similarity search only)",
+    )
+    limit: int = Field(
+        10, ge=1, le=100,
+        description="Max results per SMILES query (max 100)",
+    )
+    dataset_id: int | None = Field(
+        None, description="Optional dataset ID to scope search",
+    )
+
+
+class BatchSearchResultItem(BaseModel):
+    """Result for a single SMILES in a batch search."""
+
+    query_smiles: str
+    found: bool
+    count: int
+    results: list[MoleculeResult]
+    error: str | None = None
+
+
+class BatchSearchResponse(BaseModel):
+    """Response for batch search endpoint."""
+
+    search_type: str
+    total_queries: int
+    results: list[BatchSearchResultItem]
