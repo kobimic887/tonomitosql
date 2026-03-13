@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # Upload settings
     max_upload_size: int = 1_073_741_824  # 1GB in bytes — sufficient for ~3M row CSV
 
+    # Server settings
+    web_workers: int = 4  # Uvicorn worker count (override with WEB_WORKERS env var)
+
     model_config = {"env_file": ".env"}
 
 

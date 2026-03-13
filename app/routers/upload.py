@@ -88,7 +88,7 @@ async def upload_csv(
         logger.exception("Upload failed: %s", str(e))
         raise HTTPException(
             status_code=500,
-            detail=f"Ingestion failed: {str(e)}",
+            detail="Ingestion failed due to an internal error. Check server logs for details.",
         )
     finally:
         await file.close()

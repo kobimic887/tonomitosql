@@ -22,8 +22,12 @@ def health_check():
                 cur.execute("SELECT rdkit_version();")
                 rdkit_ver = cur.fetchone()[0]
 
-                # Count molecules
-                cur.execute("SELECT COUNT(*) FROM molecules;")
+                # Approximate molecule count — uses pg_class statistics instead of
+                # COUNT(*) which does a full sequential scan on every call.
+                # Accurate after ANALYZE runs (autovacuum does this periodically).
+                cur.execute(
+                    "SELECT reltuples::bigint FROM pg_class WHERE relname = 'molecules';"
+                )
                 mol_count = cur.fetchone()[0]
 
         return HealthResponse(

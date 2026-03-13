@@ -27,17 +27,8 @@ MIN_TANIMOTO_THRESHOLD = 0.1  # Floor to prevent full table scans
 MAX_TANIMOTO_THRESHOLD = 1.0
 DEFAULT_TANIMOTO_THRESHOLD = 0.5
 
-
-def _validate_query_smiles(smiles: str) -> str:
-    """Validate and canonicalize a query SMILES string.
-
-    Uses rdkit-pypi if available (x86_64), otherwise falls back to
-    PostgreSQL's RDKit cartridge (mol_from_smiles + mol_to_smiles).
-
-    Returns the canonical SMILES on success.
-    Raises ValueError with descriptive message on failure.
-    """
-    return validate_query_smiles(smiles)
+# Guard against runaway queries (broad substructure patterns like 'C' or '[#6]')
+SEARCH_TIMEOUT = "30s"
 
 
 def _clamp_pagination(offset: int, limit: int) -> tuple[int, int]:
@@ -47,7 +38,7 @@ def _clamp_pagination(offset: int, limit: int) -> tuple[int, int]:
     return offset, limit
 
 
-def exact_match(smiles: str) -> SearchResponse:
+def exact_match(smiles: str, dataset_id: int | None = None) -> SearchResponse:
     """Search for an exact molecular match using the @= operator.
 
     Uses canonical SMILES B-tree index for fast lookup, then verifies
@@ -55,6 +46,7 @@ def exact_match(smiles: str) -> SearchResponse:
 
     Args:
         smiles: SMILES string to search for
+        dataset_id: Optional dataset filter
 
     Returns:
         SearchResponse with found=True/False and matching molecule(s)
@@ -62,25 +54,38 @@ def exact_match(smiles: str) -> SearchResponse:
     Raises:
         ValueError: If SMILES is invalid
     """
-    canonical = _validate_query_smiles(smiles)
+    canonical = validate_query_smiles(smiles)
 
     with get_db() as conn:
         with conn.cursor() as cur:
+            cur.execute(
+                sql.SQL("SET statement_timeout = {}").format(
+                    sql.Literal(SEARCH_TIMEOUT)
+                )
+            )
             # Use canonical_smiles B-tree index for fast lookup
             # Then verify with @= for molecular graph equality
-            cur.execute(
-                """
-                SELECT m.id, m.canonical_smiles
+            query = """
+                SELECT m.id, m.canonical_smiles, m.metadata
                 FROM molecules m
-                WHERE m.canonical_smiles = %s
-                  AND m.mol @= mol_from_smiles(%s::cstring)
-                """,
-                (canonical, canonical),
-            )
+                WHERE m.canonical_smiles = %(smiles)s
+                  AND m.mol @= mol_from_smiles(%(smiles)s::cstring)
+            """
+            params: dict = {"smiles": canonical}
+
+            if dataset_id is not None:
+                query += "  AND m.dataset_id = %(dataset_id)s"
+                params["dataset_id"] = dataset_id
+
+            cur.execute(query, params)
             rows = cur.fetchall()
 
     results = [
-        MoleculeResult(molecule_id=row[0], canonical_smiles=row[1])
+        MoleculeResult(
+            molecule_id=row[0],
+            canonical_smiles=row[1],
+            metadata=row[2],
+        )
         for row in rows
     ]
 
@@ -97,6 +102,7 @@ def similarity_search(
     threshold: float = DEFAULT_TANIMOTO_THRESHOLD,
     offset: int = 0,
     limit: int = DEFAULT_LIMIT,
+    dataset_id: int | None = None,
 ) -> SearchResponse:
     """Search by Tanimoto similarity using Morgan fingerprints (ECFP4).
 
@@ -107,11 +113,15 @@ def similarity_search(
     Uses <%> KNN operator for ORDER BY to leverage GiST index ordering
     instead of a full sort.
 
+    The query fingerprint is computed once in a CTE to avoid redundant
+    mol_from_smiles + morganbv_fp calls (previously computed 3x per row).
+
     Args:
         smiles: Query SMILES string
         threshold: Tanimoto similarity threshold (0.1-1.0, default 0.5)
         offset: Pagination offset
         limit: Number of results (max 1000)
+        dataset_id: Optional dataset filter
 
     Returns:
         SearchResponse with results ranked by similarity score descending
@@ -119,7 +129,7 @@ def similarity_search(
     Raises:
         ValueError: If SMILES is invalid or threshold out of range
     """
-    canonical = _validate_query_smiles(smiles)
+    canonical = validate_query_smiles(smiles)
 
     # Clamp threshold to valid range
     if threshold < MIN_TANIMOTO_THRESHOLD or threshold > MAX_TANIMOTO_THRESHOLD:
@@ -132,6 +142,11 @@ def similarity_search(
 
     with get_db() as conn:
         with conn.cursor() as cur:
+            cur.execute(
+                sql.SQL("SET statement_timeout = {}").format(
+                    sql.Literal(SEARCH_TIMEOUT)
+                )
+            )
             # CRITICAL: Set tanimoto_threshold per-query for correct GiST index usage.
             # This is a session-level variable. The connection pool returns connections
             # to the pool after use, so we must set it every time.
@@ -143,20 +158,34 @@ def similarity_search(
                 )
             )
 
+            # CTE computes the query fingerprint once, avoiding 3x redundant
+            # mol_from_smiles + morganbv_fp calls in SELECT/WHERE/ORDER BY.
+            dataset_filter = ""
+            params: dict = {"smiles": canonical, "offset": offset, "limit": limit}
+
+            if dataset_id is not None:
+                dataset_filter = "AND m.dataset_id = %(dataset_id)s"
+                params["dataset_id"] = dataset_id
+
             cur.execute(
-                """
+                f"""
+                WITH q AS (
+                    SELECT morganbv_fp(mol_from_smiles(%(smiles)s::cstring), 2) AS qfp
+                )
                 SELECT
                     m.id,
                     m.canonical_smiles,
-                    tanimoto_sml(morganbv_fp(mol_from_smiles(%(smiles)s::cstring), 2), f.mfp2) AS similarity
-                FROM fingerprints f
+                    m.metadata,
+                    tanimoto_sml(q.qfp, f.mfp2) AS similarity
+                FROM q, fingerprints f
                 JOIN molecules m ON m.id = f.molecule_id
-                WHERE morganbv_fp(mol_from_smiles(%(smiles)s::cstring), 2) %% f.mfp2
-                ORDER BY morganbv_fp(mol_from_smiles(%(smiles)s::cstring), 2) <%%> f.mfp2
+                WHERE q.qfp %% f.mfp2
+                {dataset_filter}
+                ORDER BY q.qfp <%%> f.mfp2
                 OFFSET %(offset)s
                 LIMIT %(limit)s
                 """,
-                {"smiles": canonical, "offset": offset, "limit": limit},
+                params,
             )
             rows = cur.fetchall()
 
@@ -164,7 +193,8 @@ def similarity_search(
         MoleculeResult(
             molecule_id=row[0],
             canonical_smiles=row[1],
-            similarity=round(float(row[2]), 4),
+            metadata=row[2],
+            similarity=round(float(row[3]), 4),
         )
         for row in rows
     ]
@@ -181,6 +211,7 @@ def substructure_search(
     smiles: str,
     offset: int = 0,
     limit: int = DEFAULT_LIMIT,
+    dataset_id: int | None = None,
 ) -> SearchResponse:
     """Search for molecules containing the query as a substructure.
 
@@ -192,6 +223,7 @@ def substructure_search(
         smiles: SMILES pattern to search for
         offset: Pagination offset
         limit: Number of results (max 1000)
+        dataset_id: Optional dataset filter
 
     Returns:
         SearchResponse with all molecules containing the substructure
@@ -199,25 +231,42 @@ def substructure_search(
     Raises:
         ValueError: If SMILES pattern is invalid
     """
-    canonical = _validate_query_smiles(smiles)
+    canonical = validate_query_smiles(smiles)
     offset, limit = _clamp_pagination(offset, limit)
 
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT m.id, m.canonical_smiles
+                sql.SQL("SET statement_timeout = {}").format(
+                    sql.Literal(SEARCH_TIMEOUT)
+                )
+            )
+
+            query = """
+                SELECT m.id, m.canonical_smiles, m.metadata
                 FROM molecules m
                 WHERE m.mol @> mol_from_smiles(%(smiles)s::cstring)
+            """
+            params: dict = {"smiles": canonical, "offset": offset, "limit": limit}
+
+            if dataset_id is not None:
+                query += "  AND m.dataset_id = %(dataset_id)s"
+                params["dataset_id"] = dataset_id
+
+            query += """
                 OFFSET %(offset)s
                 LIMIT %(limit)s
-                """,
-                {"smiles": canonical, "offset": offset, "limit": limit},
-            )
+            """
+
+            cur.execute(query, params)
             rows = cur.fetchall()
 
     results = [
-        MoleculeResult(molecule_id=row[0], canonical_smiles=row[1])
+        MoleculeResult(
+            molecule_id=row[0],
+            canonical_smiles=row[1],
+            metadata=row[2],
+        )
         for row in rows
     ]
 

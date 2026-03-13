@@ -13,8 +13,6 @@ import json
 import logging
 from typing import BinaryIO
 
-from psycopg import sql
-
 from app.chem import validate_smiles, HAS_RDKIT
 from app.db.session import get_db
 from app.models.schemas import RowError, UploadResponse
@@ -24,6 +22,10 @@ logger = logging.getLogger(__name__)
 # Batch size for COPY protocol — 5000 rows balances memory vs round-trip overhead.
 # At ~3M rows, this means ~600 COPY operations.
 BATCH_SIZE = 5000
+
+# Cap error list to prevent OOM on CSVs with millions of invalid rows.
+# The total count is always returned; only the detail list is capped.
+MAX_ERRORS = 1000
 
 # Columns that map to dedicated molecule table columns (not metadata)
 SMILES_COLUMN = "smiles"
@@ -188,6 +190,7 @@ def ingest_csv(
     errors: list[RowError] = []
     total_rows = 0
     valid_count = 0
+    error_count = 0
 
     # Wrap binary file in text reader for csv module
     text_stream = io.TextIOWrapper(file, encoding="utf-8", errors="replace")
@@ -232,11 +235,13 @@ def ingest_csv(
 
                 # Extract SMILES
                 if smiles_idx >= len(row):
-                    errors.append(RowError(
-                        row=row_num,
-                        smiles="",
-                        reason=f"Row has {len(row)} columns, SMILES column is at index {smiles_idx}",
-                    ))
+                    error_count += 1
+                    if len(errors) < MAX_ERRORS:
+                        errors.append(RowError(
+                            row=row_num,
+                            smiles="",
+                            reason=f"Row has {len(row)} columns, SMILES column is at index {smiles_idx}",
+                        ))
                     continue
 
                 raw_smiles = row[smiles_idx].strip()
@@ -244,11 +249,13 @@ def ingest_csv(
                 # Validate SMILES (rdkit-pypi if available, else basic check)
                 canonical, error_reason = _validate_smiles(raw_smiles)
                 if error_reason:
-                    errors.append(RowError(
-                        row=row_num,
-                        smiles=raw_smiles,
-                        reason=error_reason,
-                    ))
+                    error_count += 1
+                    if len(errors) < MAX_ERRORS:
+                        errors.append(RowError(
+                            row=row_num,
+                            smiles=raw_smiles,
+                            reason=error_reason,
+                        ))
                     continue
 
                 # Build metadata from all other columns
@@ -270,7 +277,7 @@ def ingest_csv(
 
             logger.info(
                 "CSV parsed: %d total rows, %d valid, %d invalid",
-                total_rows, valid_count, len(errors),
+                total_rows, valid_count, error_count,
             )
 
             # 4. Transfer staging → molecules table (mol_from_smiles in SQL)
@@ -297,6 +304,6 @@ def ingest_csv(
         filename=filename,
         total_rows=total_rows,
         valid_count=valid_count,
-        invalid_count=len(errors),
+        invalid_count=error_count,
         errors=errors,
     )

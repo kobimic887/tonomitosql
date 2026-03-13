@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -30,6 +32,7 @@ class MoleculeResult(BaseModel):
     molecule_id: int
     canonical_smiles: str
     similarity: float | None = None  # Only populated for similarity search
+    metadata: dict[str, Any] | None = None
 
 
 class SearchResponse(BaseModel):
@@ -39,3 +42,20 @@ class SearchResponse(BaseModel):
     count: int
     results: list[MoleculeResult]
     query_smiles: str
+
+
+class DatasetResponse(BaseModel):
+    """A single dataset record."""
+
+    id: int
+    name: str
+    filename: str
+    row_count: int
+    created_at: str
+
+
+class DatasetListResponse(BaseModel):
+    """Response for listing datasets."""
+
+    datasets: list[DatasetResponse]
+    count: int
