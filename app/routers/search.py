@@ -2,7 +2,7 @@
 
 Provides three search types:
 - GET /search/exact — Find exact molecular match
-- GET /search/similarity — Find similar molecules by Tanimoto coefficient
+- GET /search/similarity — Find similar molecules (configurable FP type + metric)
 - GET /search/substructure — Find molecules containing a substructure pattern
 
 All endpoints accept an optional dataset_id filter to scope searches.
@@ -16,8 +16,10 @@ from app.models.schemas import (
     BatchSearchRequest,
     BatchSearchResponse,
     BatchSearchResultItem,
+    FingerprintType,
     SearchResponse,
     SearchType,
+    SimilarityMetric,
 )
 from app.services import search as search_service
 
@@ -59,13 +61,13 @@ def search_exact(
 @router.get(
     "/similarity",
     response_model=SearchResponse,
-    summary="Tanimoto similarity search",
+    summary="Similarity search",
     description=(
-        "Search for molecules similar to the query using Tanimoto coefficient "
-        "on Morgan fingerprints (radius 2, ECFP4 equivalent). Results are ranked "
-        "by similarity score descending. Uses GiST-indexed fingerprints for "
-        "sub-second queries on 100K+ molecules. The threshold controls the "
-        "minimum similarity — lower thresholds return more (less similar) results."
+        "Search for molecules similar to the query using configurable fingerprint "
+        "type and similarity metric. Supports 6 fingerprint types (morgan, maccs, "
+        "feat_morgan, atom_pair, torsion, rdkit) and 2 similarity metrics "
+        "(tanimoto, dice). Results are ranked by similarity score descending. "
+        "Uses GiST-indexed fingerprints for sub-second queries on 100K+ molecules."
     ),
 )
 def search_similarity(
@@ -78,7 +80,7 @@ def search_similarity(
         0.5,
         ge=0.1,
         le=1.0,
-        description="Minimum Tanimoto similarity threshold (0.1-1.0, default 0.5)",
+        description="Minimum similarity threshold (0.1-1.0, default 0.5)",
     ),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(
@@ -87,9 +89,20 @@ def search_similarity(
     dataset_id: int | None = Query(
         None, description="Optional dataset ID to scope search"
     ),
+    fingerprint_type: FingerprintType = Query(
+        FingerprintType.morgan,
+        description="Fingerprint type: morgan (ECFP4), maccs, feat_morgan (FCFP4), atom_pair, torsion, rdkit",
+    ),
+    similarity_metric: SimilarityMetric = Query(
+        SimilarityMetric.tanimoto,
+        description="Similarity metric: tanimoto or dice",
+    ),
 ):
-    """Search by Tanimoto similarity with configurable threshold."""
-    logger.info("Search similarity: %s (threshold=%s)", smiles, threshold)
+    """Search by similarity with configurable fingerprint type and metric."""
+    logger.info(
+        "Search similarity: %s (threshold=%s, fp=%s, metric=%s)",
+        smiles, threshold, fingerprint_type.value, similarity_metric.value,
+    )
     try:
         result = search_service.similarity_search(
             smiles=smiles,
@@ -97,6 +110,8 @@ def search_similarity(
             offset=offset,
             limit=limit,
             dataset_id=dataset_id,
+            fingerprint_type=fingerprint_type,
+            similarity_metric=similarity_metric,
         )
         return result
     except ValueError as e:
@@ -176,6 +191,8 @@ def search_batch(
                     threshold=body.threshold,
                     limit=body.limit,
                     dataset_id=body.dataset_id,
+                    fingerprint_type=body.fingerprint_type,
+                    similarity_metric=body.similarity_metric,
                 )
             else:  # substructure
                 resp = search_service.substructure_search(

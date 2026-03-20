@@ -119,17 +119,31 @@ def _transfer_staging_to_molecules(conn, dataset_id: int) -> int:
 
 
 def _compute_fingerprints(conn, dataset_id: int) -> int:
-    """Compute Morgan fingerprints (radius 2) for all molecules in the dataset.
+    """Compute all fingerprint types for molecules in the dataset.
 
-    Uses morganbv_fp(mol, 2) which produces ECFP4-equivalent bit vector
-    fingerprints stored in the bfp column type with GiST index support.
+    Computes 6 fingerprint types in a single INSERT for efficiency:
+    - mfp2: Morgan/ECFP4 (radius 2)
+    - maccs: MACCS 166 structural keys
+    - ffp2: Feature Morgan/FCFP4 (radius 2)
+    - apfp: Atom Pair
+    - ttfp: Topological Torsion
+    - rdfp: RDKit/Daylight-like
+
+    All produce bfp (bit vector fingerprint) values with GiST index support.
 
     Returns the number of fingerprints computed.
     """
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO fingerprints (molecule_id, mfp2)
-            SELECT m.id, morganbv_fp(m.mol, 2)
+            INSERT INTO fingerprints (molecule_id, mfp2, maccs, ffp2, apfp, ttfp, rdfp)
+            SELECT
+                m.id,
+                morganbv_fp(m.mol, 2),
+                maccs_fp(m.mol),
+                featmorganbv_fp(m.mol, 2),
+                atompairbv_fp(m.mol),
+                torsionbv_fp(m.mol),
+                rdkit_fp(m.mol)
             FROM molecules m
             WHERE m.dataset_id = %(dataset_id)s
               AND NOT EXISTS (

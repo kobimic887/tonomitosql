@@ -45,11 +45,21 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     -- Precomputed fingerprints for similarity search
     CREATE TABLE IF NOT EXISTS fingerprints (
         molecule_id INTEGER PRIMARY KEY REFERENCES molecules(id) ON DELETE CASCADE,
-        mfp2 bfp NOT NULL
+        mfp2 bfp NOT NULL,          -- Morgan/ECFP4 (radius 2)
+        maccs bfp NOT NULL,          -- MACCS 166 structural keys
+        ffp2 bfp NOT NULL,           -- Feature Morgan/FCFP4 (radius 2)
+        apfp bfp NOT NULL,           -- Atom Pair
+        ttfp bfp NOT NULL,           -- Topological Torsion
+        rdfp bfp NOT NULL            -- RDKit/Daylight-like
     );
 
-    -- GiST index on Morgan fingerprint for Tanimoto similarity
+    -- GiST indexes for similarity/KNN search on each fingerprint type
     CREATE INDEX IF NOT EXISTS idx_fps_mfp2 ON fingerprints USING gist(mfp2);
+    CREATE INDEX IF NOT EXISTS idx_fps_maccs ON fingerprints USING gist(maccs);
+    CREATE INDEX IF NOT EXISTS idx_fps_ffp2 ON fingerprints USING gist(ffp2);
+    CREATE INDEX IF NOT EXISTS idx_fps_apfp ON fingerprints USING gist(apfp);
+    CREATE INDEX IF NOT EXISTS idx_fps_ttfp ON fingerprints USING gist(ttfp);
+    CREATE INDEX IF NOT EXISTS idx_fps_rdfp ON fingerprints USING gist(rdfp);
 
     -- API key storage for authentication
     CREATE TABLE IF NOT EXISTS api_keys (
