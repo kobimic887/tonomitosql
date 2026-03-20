@@ -70,6 +70,24 @@ class SearchType(str, Enum):
     substructure = "substructure"
 
 
+class FingerprintType(str, Enum):
+    """Fingerprint type for similarity search."""
+
+    morgan = "morgan"            # ECFP4 (Morgan radius 2)
+    maccs = "maccs"              # MACCS 166 structural keys
+    feat_morgan = "feat_morgan"  # FCFP4 (Feature Morgan radius 2)
+    atom_pair = "atom_pair"      # Atom Pair
+    torsion = "torsion"          # Topological Torsion
+    rdkit = "rdkit"              # RDKit/Daylight-like
+
+
+class SimilarityMetric(str, Enum):
+    """Similarity metric for similarity search."""
+
+    tanimoto = "tanimoto"  # |A∩B| / |A∪B|
+    dice = "dice"          # 2·|A∩B| / (|A|+|B|)
+
+
 class BatchSearchRequest(BaseModel):
     """Request body for batch search."""
 
@@ -83,7 +101,7 @@ class BatchSearchRequest(BaseModel):
     )
     threshold: float = Field(
         0.5, ge=0.1, le=1.0,
-        description="Tanimoto threshold (similarity search only)",
+        description="Similarity threshold (0.1-1.0, similarity search only)",
     )
     limit: int = Field(
         10, ge=1, le=100,
@@ -91,6 +109,14 @@ class BatchSearchRequest(BaseModel):
     )
     dataset_id: int | None = Field(
         None, description="Optional dataset ID to scope search",
+    )
+    fingerprint_type: FingerprintType = Field(
+        FingerprintType.morgan,
+        description="Fingerprint type for similarity search (default: morgan/ECFP4)",
+    )
+    similarity_metric: SimilarityMetric = Field(
+        SimilarityMetric.tanimoto,
+        description="Similarity metric for similarity search (default: tanimoto)",
     )
 
 

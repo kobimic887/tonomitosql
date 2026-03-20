@@ -2,7 +2,7 @@
 
 Uses raw SQL with parameterized queries for all RDKit operations:
 - Exact match: @= operator (molecular graph equality)
-- Tanimoto similarity: % operator + tanimoto_sml() with SET rdkit.tanimoto_threshold
+- Similarity: Tanimoto (%) or Dice (#) with configurable fingerprint type
 - Substructure: @> operator (substructure containment)
 
 SMILES validation uses rdkit-pypi when available (x86_64), falls back to
@@ -16,7 +16,12 @@ from psycopg import sql
 
 from app.chem import validate_query_smiles
 from app.db.session import get_db
-from app.models.schemas import MoleculeResult, SearchResponse
+from app.models.schemas import (
+    FingerprintType,
+    MoleculeResult,
+    SearchResponse,
+    SimilarityMetric,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +34,24 @@ DEFAULT_TANIMOTO_THRESHOLD = 0.5
 
 # Guard against runaway queries (broad substructure patterns like 'C' or '[#6]')
 SEARCH_TIMEOUT = "30s"
+
+# ── Fingerprint / Similarity mappings ──────────────────────────────────
+
+# Map FingerprintType enum → (DB column name, SQL function to compute query FP)
+FP_CONFIG: dict[FingerprintType, tuple[str, str]] = {
+    FingerprintType.morgan:       ("mfp2",  "morganbv_fp(mol_from_smiles(%(smiles)s::cstring), 2)"),
+    FingerprintType.maccs:        ("maccs", "maccs_fp(mol_from_smiles(%(smiles)s::cstring))"),
+    FingerprintType.feat_morgan:  ("ffp2",  "featmorganbv_fp(mol_from_smiles(%(smiles)s::cstring), 2)"),
+    FingerprintType.atom_pair:    ("apfp",  "atompairbv_fp(mol_from_smiles(%(smiles)s::cstring))"),
+    FingerprintType.torsion:      ("ttfp",  "torsionbv_fp(mol_from_smiles(%(smiles)s::cstring))"),
+    FingerprintType.rdkit:        ("rdfp",  "rdkit_fp(mol_from_smiles(%(smiles)s::cstring))"),
+}
+
+# Map SimilarityMetric enum → (sml function, filter operator, KNN operator, threshold variable)
+SIM_CONFIG: dict[SimilarityMetric, tuple[str, str, str, str]] = {
+    SimilarityMetric.tanimoto: ("tanimoto_sml", "%%",  "<%%>", "rdkit.tanimoto_threshold"),
+    SimilarityMetric.dice:     ("dice_sml",     "#",   "<#>",  "rdkit.dice_threshold"),
+}
 
 
 def _clamp_pagination(offset: int, limit: int) -> tuple[int, int]:
@@ -103,25 +126,22 @@ def similarity_search(
     offset: int = 0,
     limit: int = DEFAULT_LIMIT,
     dataset_id: int | None = None,
+    fingerprint_type: FingerprintType = FingerprintType.morgan,
+    similarity_metric: SimilarityMetric = SimilarityMetric.tanimoto,
 ) -> SearchResponse:
-    """Search by Tanimoto similarity using Morgan fingerprints (ECFP4).
+    """Search by similarity using configurable fingerprint type and metric.
 
-    Uses the % operator with GiST index on mfp2 column. The
-    rdkit.tanimoto_threshold session variable MUST be set before the query
-    to ensure the GiST index filters correctly.
-
-    Uses <%> KNN operator for ORDER BY to leverage GiST index ordering
-    instead of a full sort.
-
-    The query fingerprint is computed once in a CTE to avoid redundant
-    mol_from_smiles + morganbv_fp calls (previously computed 3x per row).
+    Supports 6 fingerprint types and 2 similarity metrics, all using
+    GiST-indexed bit vector fingerprints for sub-second queries.
 
     Args:
         smiles: Query SMILES string
-        threshold: Tanimoto similarity threshold (0.1-1.0, default 0.5)
+        threshold: Similarity threshold (0.1-1.0, default 0.5)
         offset: Pagination offset
         limit: Number of results (max 1000)
         dataset_id: Optional dataset filter
+        fingerprint_type: Which fingerprint to compare (default: morgan/ECFP4)
+        similarity_metric: Which similarity function (default: tanimoto)
 
     Returns:
         SearchResponse with results ranked by similarity score descending
@@ -140,6 +160,10 @@ def similarity_search(
 
     offset, limit = _clamp_pagination(offset, limit)
 
+    # Look up FP and similarity config
+    fp_column, fp_sql_func = FP_CONFIG[fingerprint_type]
+    sml_func, filter_op, knn_op, threshold_var = SIM_CONFIG[similarity_metric]
+
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -147,19 +171,15 @@ def similarity_search(
                     sql.Literal(SEARCH_TIMEOUT)
                 )
             )
-            # CRITICAL: Set tanimoto_threshold per-query for correct GiST index usage.
-            # This is a session-level variable. The connection pool returns connections
-            # to the pool after use, so we must set it every time.
-            # NOTE: SET does not support parameterized $1 placeholders, so we use
-            # sql.Literal for safe value interpolation.
+            # Set the per-session threshold variable for the GiST index filter.
+            # Must be set every time because connections are pooled.
             cur.execute(
-                sql.SQL("SET rdkit.tanimoto_threshold = {}").format(
-                    sql.Literal(threshold)
+                sql.SQL("SET {} = {}").format(
+                    sql.Identifier(*threshold_var.split(".")),
+                    sql.Literal(threshold),
                 )
             )
 
-            # CTE computes the query fingerprint once, avoiding 3x redundant
-            # mol_from_smiles + morganbv_fp calls in SELECT/WHERE/ORDER BY.
             dataset_filter = ""
             params: dict = {"smiles": canonical, "offset": offset, "limit": limit}
 
@@ -167,26 +187,27 @@ def similarity_search(
                 dataset_filter = "AND m.dataset_id = %(dataset_id)s"
                 params["dataset_id"] = dataset_id
 
-            cur.execute(
-                f"""
+            # CTE computes the query fingerprint once.
+            # Dynamic column/function/operator selection based on FP type and metric.
+            query = f"""
                 WITH q AS (
-                    SELECT morganbv_fp(mol_from_smiles(%(smiles)s::cstring), 2) AS qfp
+                    SELECT {fp_sql_func} AS qfp
                 )
                 SELECT
                     m.id,
                     m.canonical_smiles,
                     m.metadata,
-                    tanimoto_sml(q.qfp, f.mfp2) AS similarity
+                    {sml_func}(q.qfp, f.{fp_column}) AS similarity
                 FROM q, fingerprints f
                 JOIN molecules m ON m.id = f.molecule_id
-                WHERE q.qfp %% f.mfp2
+                WHERE q.qfp {filter_op} f.{fp_column}
                 {dataset_filter}
-                ORDER BY q.qfp <%%> f.mfp2
+                ORDER BY q.qfp {knn_op} f.{fp_column}
                 OFFSET %(offset)s
                 LIMIT %(limit)s
-                """,
-                params,
-            )
+            """
+
+            cur.execute(query, params)
             rows = cur.fetchall()
 
     results = [
