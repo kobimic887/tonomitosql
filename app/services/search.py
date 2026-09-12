@@ -7,7 +7,7 @@ Uses raw SQL with parameterized queries for all RDKit operations:
 
 SMILES validation uses rdkit-pypi when available (x86_64), falls back to
 PostgreSQL's RDKit cartridge (mol_from_smiles) on ARM.
-All queries use parameterized %s placeholders — never string concatenation.
+All queries use parameterized %s placeholders - never string concatenation.
 """
 
 import logging
@@ -202,7 +202,10 @@ def similarity_search(
                 JOIN molecules m ON m.id = f.molecule_id
                 WHERE q.qfp {filter_op} f.{fp_column}
                 {dataset_filter}
-                ORDER BY q.qfp {knn_op} f.{fp_column}
+                -- Rank by computed similarity DESC, m.id ASC as the pagination
+                -- tie-breaker BEFORE OFFSET/LIMIT. Avoid KNN-operator ordering
+                -- with a secondary key; that breaks OFFSET pages.
+                ORDER BY {sml_func}(q.qfp, f.{fp_column}) DESC, m.id ASC
                 OFFSET %(offset)s
                 LIMIT %(limit)s
             """
@@ -237,7 +240,7 @@ def substructure_search(
     """Search for molecules containing the query as a substructure.
 
     Uses the @> operator with GiST index on mol column.
-    Note: rdkit.do_chiral_sss defaults to false (v1 behavior — matches
+    Note: rdkit.do_chiral_sss defaults to false (v1 behavior - matches
     both enantiomers).
 
     Args:
