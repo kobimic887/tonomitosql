@@ -2,6 +2,10 @@ services:
   db:
     restart: unless-stopped
     image: informaticsmatters/rdkit-cartridge-debian:Release_2024_09_3
+    # Default Docker shm is 64MB. Broad similarity sorts/KNN gathers need ~50MB
+    # parallel segments and fail with psycopg DiskFull under the default.
+    # Recreate the db service to apply (docker update has no --shm-size here).
+    shm_size: "1gb"
     volumes:
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./scripts/postgresql.conf:/etc/postgresql/postgresql.conf

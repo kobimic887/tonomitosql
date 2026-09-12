@@ -171,6 +171,12 @@ def similarity_search(
                     sql.Literal(SEARCH_TIMEOUT)
                 )
             )
+            # Docker default /dev/shm is 64MB. Parallel gather for broad
+            # MACCS/Dice sorts tries to resize a ~50MB shared-memory segment and
+            # raises DiskFull ("No space left on device") — not host disk.
+            # Disable parallel workers per session (pooled connections).
+            # Pair with db shm_size >= 1gb in docker-compose when recreating.
+            cur.execute("SET max_parallel_workers_per_gather = 0")
             # Set the per-session threshold variable for the GiST index filter.
             # Must be set every time because connections are pooled.
             cur.execute(
@@ -181,7 +187,18 @@ def similarity_search(
             )
 
             dataset_filter = ""
-            params: dict = {"smiles": canonical, "offset": offset, "limit": limit}
+            # Candidate cap = engine MAX_LIMIT: KNN retrieves at most 1000
+            # nearest neighbors (index-assisted), then we re-rank that bounded
+            # set by similarity DESC, id ASC before OFFSET/LIMIT.
+            # Unbounded ORDER BY sml(...) over all threshold hits (1e71b0c)
+            # exposed DiskFull under 64MB shm and multi-second full sorts when
+            # parallel was off. Do not put a secondary key on the KNN operator.
+            params: dict = {
+                "smiles": canonical,
+                "offset": offset,
+                "limit": limit,
+                "cap": MAX_LIMIT,
+            }
 
             if dataset_id is not None:
                 dataset_filter = "AND m.dataset_id = %(dataset_id)s"
@@ -192,20 +209,23 @@ def similarity_search(
             query = f"""
                 WITH q AS (
                     SELECT {fp_sql_func} AS qfp
+                ),
+                candidates AS (
+                    SELECT
+                        m.id,
+                        m.canonical_smiles,
+                        m.metadata,
+                        {sml_func}(q.qfp, f.{fp_column}) AS similarity
+                    FROM q, fingerprints f
+                    JOIN molecules m ON m.id = f.molecule_id
+                    WHERE q.qfp {filter_op} f.{fp_column}
+                    {dataset_filter}
+                    ORDER BY q.qfp {knn_op} f.{fp_column}
+                    LIMIT %(cap)s
                 )
-                SELECT
-                    m.id,
-                    m.canonical_smiles,
-                    m.metadata,
-                    {sml_func}(q.qfp, f.{fp_column}) AS similarity
-                FROM q, fingerprints f
-                JOIN molecules m ON m.id = f.molecule_id
-                WHERE q.qfp {filter_op} f.{fp_column}
-                {dataset_filter}
-                -- Rank by computed similarity DESC, m.id ASC as the pagination
-                -- tie-breaker BEFORE OFFSET/LIMIT. Avoid KNN-operator ordering
-                -- with a secondary key; that breaks OFFSET pages.
-                ORDER BY {sml_func}(q.qfp, f.{fp_column}) DESC, m.id ASC
+                SELECT id, canonical_smiles, metadata, similarity
+                FROM candidates
+                ORDER BY similarity DESC, id ASC
                 OFFSET %(offset)s
                 LIMIT %(limit)s
             """
