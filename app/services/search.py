@@ -187,45 +187,31 @@ def similarity_search(
             )
 
             dataset_filter = ""
-            # Candidate cap = engine MAX_LIMIT: KNN retrieves at most 1000
-            # nearest neighbors (index-assisted), then we re-rank that bounded
-            # set by similarity DESC, id ASC before OFFSET/LIMIT.
-            # Unbounded ORDER BY sml(...) over all threshold hits (1e71b0c)
-            # exposed DiskFull under 64MB shm and multi-second full sorts when
-            # parallel was off. Do not put a secondary key on the KNN operator.
-            params: dict = {
-                "smiles": canonical,
-                "offset": offset,
-                "limit": limit,
-                "cap": MAX_LIMIT,
-            }
+            params: dict = {"smiles": canonical, "offset": offset, "limit": limit}
 
             if dataset_id is not None:
                 dataset_filter = "AND m.dataset_id = %(dataset_id)s"
                 params["dataset_id"] = dataset_id
 
-            # CTE computes the query fingerprint once.
-            # Dynamic column/function/operator selection based on FP type and metric.
+            # Global rank by similarity DESC, m.id ASC before OFFSET/LIMIT.
+            # Do not KNN-LIMIT then re-rank: equal-score ties past the KNN
+            # boundary are not globally deterministic and rows beyond the cap
+            # disappear. Do not put a secondary key on the KNN operator either
+            # — that breaks OFFSET pages across ties.
             query = f"""
                 WITH q AS (
                     SELECT {fp_sql_func} AS qfp
-                ),
-                candidates AS (
-                    SELECT
-                        m.id,
-                        m.canonical_smiles,
-                        m.metadata,
-                        {sml_func}(q.qfp, f.{fp_column}) AS similarity
-                    FROM q, fingerprints f
-                    JOIN molecules m ON m.id = f.molecule_id
-                    WHERE q.qfp {filter_op} f.{fp_column}
-                    {dataset_filter}
-                    ORDER BY q.qfp {knn_op} f.{fp_column}
-                    LIMIT %(cap)s
                 )
-                SELECT id, canonical_smiles, metadata, similarity
-                FROM candidates
-                ORDER BY similarity DESC, id ASC
+                SELECT
+                    m.id,
+                    m.canonical_smiles,
+                    m.metadata,
+                    {sml_func}(q.qfp, f.{fp_column}) AS similarity
+                FROM q, fingerprints f
+                JOIN molecules m ON m.id = f.molecule_id
+                WHERE q.qfp {filter_op} f.{fp_column}
+                {dataset_filter}
+                ORDER BY {sml_func}(q.qfp, f.{fp_column}) DESC, m.id ASC
                 OFFSET %(offset)s
                 LIMIT %(limit)s
             """
